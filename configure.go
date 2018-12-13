@@ -1,9 +1,8 @@
-package main
+package zconfig
 
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -24,13 +23,13 @@ func Configure(s interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "walking struct")
 	}
-	DisplayField(root, 0)
 
 	fields, err := resolve(root)
 	if err != nil {
 		return errors.Wrap(err, "resolving struct")
 	}
-	DisplayFieldsGraph(fields)
+
+	_ = fields
 
 	return nil
 }
@@ -80,23 +79,6 @@ func (f *Field) InjectionTarget() (InjectionKey, bool) {
 
 func (f *Field) Inject(s *Field) (err error) {
 	return nil
-}
-
-func DisplayField(f *Field, l int) {
-	fmt.Println(strings.Repeat("\t", l), f.Path)
-	for _, c := range f.Children {
-		DisplayField(c, l+1)
-	}
-}
-
-func DisplayFieldsGraph(fields []*Field) {
-	for _, f := range fields {
-		fmt.Println(f.Path)
-	}
-}
-
-func log(msg ...interface{}) {
-	fmt.Println(msg...)
 }
 
 func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err error) {
