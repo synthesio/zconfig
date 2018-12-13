@@ -3,6 +3,7 @@ package zconfig
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -219,7 +220,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 		// TODO Find the circular circuit and improve the error
 		// message.
 		if len(resolved) == 0 {
-			return nil, errors.New("circular dependency found")
+			return nil, newCycleError(dependencies)
 		}
 
 		// Resolved fields can be added to the result as is.
@@ -227,4 +228,36 @@ func resolve(root *Field) (fields []*Field, err error) {
 	}
 
 	return fields, nil
+}
+
+func newCycleError(dependencies map[Path][]*Field) error {
+	var paths [][]Path
+
+	for path, deps := range dependencies {
+		for _, field := range deps {
+			paths = append(paths, []Path{path, field.Path})
+		}
+	}
+
+	for {
+		var next [][]Path
+		for _, path := range paths {
+			for _, field := range dependencies[path[len(path)-1]] {
+				if field.Path == path[0] {
+					return errors.Errorf("cycle detected: %s", buildCycle(path))
+				}
+
+				next = append(next, append(path, field.Path))
+			}
+		}
+		paths = next
+	}
+}
+
+func buildCycle(paths []Path) string {
+	var spaths = make([]string, 0, len(paths))
+	for _, path := range paths {
+		spaths = append(spaths, string(path))
+	}
+	return strings.Join(spaths, " -> ")
 }

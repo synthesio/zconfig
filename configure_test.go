@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 type Service struct {
@@ -144,4 +145,41 @@ func TestField_Inject(t *testing.T) {
 		t.Errorf("failed injection")
 		return
 	}
+}
+
+func TestNewCycleError(t *testing.T) {
+	// This is the dependency map of the following structure, which is
+	// valid Go.
+	// type CycleService struct {
+	// 	B *CycleDepB `inject-as:"B"`
+	// 	C *CycleDepC `inject-as:"C"`
+	// }
+	// type CycleDepB struct {
+	// 	D *CycleDepC `inject:"C"`
+	// }
+	// type CycleDepC struct {
+	// 	E *CycleDepB `inject:"B"`
+	// }
+	var deps = map[Path][]*Field{
+		"A": []*Field{{Path: "B"}, {Path: "C"}},
+		"B": []*Field{{Path: "D"}},
+		"C": []*Field{{Path: "E"}},
+		"D": []*Field{{Path: "C"}},
+		"E": []*Field{{Path: "B"}},
+	}
+
+	var err error
+	var done = make(chan struct{})
+	go func() {
+		err = newCycleError(deps)
+		close(done)
+	}()
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatalf("timeout computing cycle")
+	case <-done:
+	}
+
+	t.Log(err)
 }
