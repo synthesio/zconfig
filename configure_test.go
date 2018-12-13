@@ -111,3 +111,37 @@ func testResolvedGraph(t *testing.T, fields []*Field) {
 		}
 	}
 }
+
+type InjectionDependency struct {
+	F string
+}
+
+type InjectionService struct {
+	Source *InjectionDependency `inject-as:"source"`
+	Target *InjectionDependency `inject:"source"`
+}
+
+func TestField_Inject(t *testing.T) {
+	var s InjectionService
+	root, err := walk(reflect.ValueOf(&s), reflect.StructField{}, nil)
+	if err != nil {
+		t.Errorf("walking service: %s", err)
+		return
+	}
+
+	if len(root.Children) != 2 {
+		t.Errorf("unexpected number of children: wanted %d, got %d", 2, len(root.Children))
+		return
+	}
+
+	err = root.Children[1].Inject(root.Children[0])
+	if err != nil {
+		t.Errorf("unable to inject source into target: %s", err)
+		return
+	}
+
+	if s.Source != s.Target {
+		t.Errorf("failed injection")
+		return
+	}
+}
