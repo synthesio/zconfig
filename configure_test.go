@@ -7,8 +7,10 @@ import (
 )
 
 type Service struct {
-	Workers    int              `key:"workers"`
-	Dependency SimpleDependency `key:"dependency"`
+	Workers     int              `key:"workers"`
+	Dependency  SimpleDependency `key:"dependency" inject-as:"dependency"`
+	Injected    SimpleDependency `inject:"dependency"`
+	notExported SimpleDependency
 }
 
 type SimpleDependency struct {
@@ -19,15 +21,15 @@ func TestWalk(t *testing.T) {
 	var v = reflect.ValueOf(new(Service))
 	root, err := walk(v, reflect.StructField{}, nil)
 	if err != nil {
-		t.Errorf("walking service: %s", err)
-		return
+		t.Fatalf("walking service: %s", err)
 	}
 
-	var expected = &Field{Path: "root", Children: []*Field{
+	expected := &Field{Path: "root", Children: []*Field{
 		{Path: "root.Workers"},
 		{Path: "root.Dependency", Children: []*Field{
 			{Path: "root.Dependency.Foo"},
 		}},
+		{Path: "root.Injected"},
 	}}
 
 	displayGraph(t, root, 0)
@@ -43,18 +45,15 @@ func displayGraph(t *testing.T, f *Field, l int) {
 
 func testGraph(t *testing.T, actual, expected, parent *Field) {
 	if actual.Path != expected.Path {
-		t.Errorf("invalid value for path: expected %s, got %s", expected.Path, actual.Path)
-		return
+		t.Fatalf("invalid value for path: expected %s, got %s", expected.Path, actual.Path)
 	}
 
 	if actual.Parent != parent {
-		t.Errorf("invalud parent for path %s: wanted %p, got %p", actual.Path, parent, actual.Parent)
-		return
+		t.Fatalf("invalud parent for path %s: wanted %p, got %p", actual.Path, parent, actual.Parent)
 	}
 
 	if len(actual.Children) != len(expected.Children) {
-		t.Errorf("invalid number of children for path %s: wanted %d, got %d", actual.Path, len(actual.Children), len(expected.Children))
-		return
+		t.Fatalf("invalid number of children for path %s: wanted %d, got %d", actual.Path, len(expected.Children), len(actual.Children))
 	}
 
 	for i := 0; i < len(actual.Children); i++ {
@@ -66,14 +65,12 @@ func TestResolve(t *testing.T) {
 	var v = reflect.ValueOf(new(Service))
 	root, err := walk(v, reflect.StructField{}, nil)
 	if err != nil {
-		t.Errorf("walking service: %s", err)
-		return
+		t.Fatalf("walking service: %s", err)
 	}
 
 	fields, err := resolve(root)
 	if err != nil {
-		t.Errorf("resolving graph: %s", err)
-		return
+		t.Fatalf("resolving graph: %s", err)
 	}
 
 	displayResolvedGraph(t, fields)
@@ -93,15 +90,13 @@ func testResolvedGraph(t *testing.T, fields []*Field) {
 	for _, field := range fields {
 		for _, c := range field.Children {
 			if _, ok := found[c.Path]; !ok {
-				t.Errorf("unexpected field a path %s depends on unencountered dependency %s", field.Path, c.Path)
-				return
+				t.Fatalf("unexpected field a path %s depends on unencountered dependency %s", field.Path, c.Path)
 			}
 		}
 
 		if key, ok := field.InjectionTarget(); ok {
 			if _, ok := injected[key]; !ok {
-				t.Errorf("unexpected field a path %s depends on unencountered injection %s", field.Path, key)
-				return
+				t.Fatalf("unexpected field a path %s depends on unencountered injection %s", field.Path, key)
 			}
 		}
 
@@ -125,23 +120,19 @@ func TestField_Inject(t *testing.T) {
 	var s InjectionService
 	root, err := walk(reflect.ValueOf(&s), reflect.StructField{}, nil)
 	if err != nil {
-		t.Errorf("walking service: %s", err)
-		return
+		t.Fatalf("walking service: %s", err)
 	}
 
 	if len(root.Children) != 2 {
-		t.Errorf("unexpected number of children: wanted %d, got %d", 2, len(root.Children))
-		return
+		t.Fatalf("unexpected number of children: wanted %d, got %d", 2, len(root.Children))
 	}
 
 	err = root.Children[1].Inject(root.Children[0])
 	if err != nil {
-		t.Errorf("unable to inject source into target: %s", err)
-		return
+		t.Fatalf("unable to inject source into target: %s", err)
 	}
 
 	if s.Source != s.Target {
-		t.Errorf("failed injection")
-		return
+		t.Fatalf("failed injection")
 	}
 }
