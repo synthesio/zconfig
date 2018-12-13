@@ -78,6 +78,15 @@ func (f *Field) InjectionTarget() (InjectionKey, bool) {
 }
 
 func (f *Field) Inject(s *Field) (err error) {
+	if !s.Value.Type().AssignableTo(f.Value.Type()) {
+		return errors.Errorf("cannot inject %s into %s for field %s", s.Value.Type(), f.Value.Type(), f.Path)
+	}
+
+	if !f.Value.CanSet() {
+		return errors.Errorf("cannot address %s for injection", f.Value.Type())
+	}
+
+	f.Value.Set(s.Value)
 	return nil
 }
 
@@ -100,6 +109,9 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
+			if !v.CanSet() {
+				return nil, errors.Errorf("cannot address %s for path %s", v.Type(), field.Path)
+			}
 			v.Set(reflect.New(v.Type().Elem()))
 		}
 		v = v.Elem()
