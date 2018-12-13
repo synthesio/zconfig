@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Service struct {
@@ -76,36 +78,30 @@ func TestResolve(t *testing.T) {
 	}
 
 	displayResolvedGraph(t, fields)
-	testResolvedGraph(t, fields)
+
+	expected := map[Path]struct{}{
+		"root":                {},
+		"root.Workers":        {},
+		"root.Dependency":     {},
+		"root.Dependency.Foo": {},
+	}
+
+	for _, field := range fields {
+		if _, ok := expected[field.Path]; ok {
+			delete(expected, field.Path)
+		} else {
+			t.Errorf("got unexpected field %s", field.Path)
+		}
+	}
+
+	for path := range expected {
+		t.Errorf("expected field %s not found", path)
+	}
 }
 
 func displayResolvedGraph(t *testing.T, fields []*Field) {
 	for _, f := range fields {
 		t.Log(f.Path)
-	}
-}
-
-func testResolvedGraph(t *testing.T, fields []*Field) {
-	var found = make(map[Path]struct{})
-	var injected = make(map[InjectionKey]struct{})
-
-	for _, field := range fields {
-		for _, c := range field.Children {
-			if _, ok := found[c.Path]; !ok {
-				t.Fatalf("unexpected field a path %s depends on unencountered dependency %s", field.Path, c.Path)
-			}
-		}
-
-		if key, ok := field.InjectionTarget(); ok {
-			if _, ok := injected[key]; !ok {
-				t.Fatalf("unexpected field a path %s depends on unencountered injection %s", field.Path, key)
-			}
-		}
-
-		found[field.Path] = struct{}{}
-		if key, ok := field.InjectionSource(); ok {
-			injected[key] = struct{}{}
-		}
 	}
 }
 
@@ -178,5 +174,78 @@ func TestDependencies(t *testing.T) {
 	}
 	if _, ok := bDeps[a.Path]; ok {
 		t.Fatal("a dependency found")
+	}
+}
+
+func TestHooks_Execution(t *testing.T) {
+	executed := false
+
+	testHook := func(field *Field) error {
+		executed = true
+		return nil
+	}
+
+	testRepo := Repository{
+		hooks: []Hook{testHook},
+	}
+
+	err := testRepo.Configure(new(Service))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !executed {
+		t.Fatal("hook was not executed")
+	}
+}
+
+func TestHooks_AllFields(t *testing.T) {
+	fields := map[Path]bool{
+		"root":                false,
+		"root.Workers":        false,
+		"root.Dependency":     false,
+		"root.Dependency.Foo": false,
+	}
+
+	testHook := func(field *Field) error {
+		visited, ok := fields[field.Path]
+		if !ok {
+			t.Fatalf("unexpected field: %s", field.Path)
+		}
+		if visited {
+			t.Fatalf("field %s already visited", field.Path)
+		}
+
+		fields[field.Path] = true
+
+		return nil
+	}
+
+	testRepo := Repository{
+		hooks: []Hook{testHook},
+	}
+
+	err := testRepo.Configure(new(Service))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHooks_Error(t *testing.T) {
+	expected := errors.New("an error")
+	testHook := func(field *Field) error {
+		return expected
+	}
+
+	testRepo := Repository{
+		hooks: []Hook{testHook},
+	}
+
+	err := testRepo.Configure(new(Service))
+	if err == nil {
+		t.Fatalf("expected an error, got nil")
+	}
+	if errors.Cause(err) != expected {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
