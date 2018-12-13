@@ -40,56 +40,6 @@ type (
 	InjectionKey string
 )
 
-const (
-	tagInjectAs = "inject-as"
-	tagInject   = "inject"
-)
-
-type Field struct {
-	Value       reflect.Value
-	StructField *reflect.StructField
-	Parent      *Field
-	Children    []*Field
-
-	Path Path
-	Tags *structtag.Tags
-}
-
-func (f *Field) InjectionSource() (InjectionKey, bool) {
-	if f.Tags == nil {
-		return "", false
-	}
-	tag, err := f.Tags.Get(tagInjectAs)
-	if err != nil {
-		return "", false
-	}
-	return InjectionKey(tag.Name), true
-}
-
-func (f *Field) InjectionTarget() (InjectionKey, bool) {
-	if f.Tags == nil {
-		return "", false
-	}
-	tag, err := f.Tags.Get(tagInject)
-	if err != nil {
-		return "", false
-	}
-	return InjectionKey(tag.Name), true
-}
-
-func (f *Field) Inject(s *Field) (err error) {
-	if !s.Value.Type().AssignableTo(f.Value.Type()) {
-		return errors.Errorf("cannot inject %s into %s for field %s", s.Value.Type(), f.Value.Type(), f.Path)
-	}
-
-	if !f.Value.CanSet() {
-		return errors.Errorf("cannot address %s for injection", f.Value.Type())
-	}
-
-	f.Value.Set(s.Value)
-	return nil
-}
-
 func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err error) {
 	field = &Field{
 		Value:  v,
@@ -117,7 +67,7 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 		v = v.Elem()
 	}
 
-	if v.Kind() != reflect.Struct {
+	if field.IsLeaf() {
 		return field, nil
 	}
 
@@ -127,7 +77,9 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 			return nil, err
 		}
 
-		field.Children = append(field.Children, child)
+		if child.IsExported() {
+			field.Children = append(field.Children, child)
+		}
 	}
 
 	return field, nil
