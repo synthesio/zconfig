@@ -2,7 +2,6 @@ package zconfig
 
 import (
 	"reflect"
-	"unicode"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -56,14 +55,6 @@ func (f *Field) Inject(s *Field) (err error) {
 
 	f.Value.Set(s.Value)
 	return nil
-}
-
-func (f *Field) IsExported() bool {
-	if f.StructField == nil {
-		return true
-	}
-
-	return unicode.IsUpper([]rune(f.StructField.Name)[0])
 }
 
 func (f *Field) IsLeaf() bool {
