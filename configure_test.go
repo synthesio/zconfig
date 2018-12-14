@@ -122,12 +122,12 @@ func TestNewCycleError(t *testing.T) {
 	// type CycleDepC struct {
 	// 	E *CycleDepB `inject:"B"`
 	// }
-	var deps = map[Path][]*Field{
-		"A": []*Field{{Path: "B"}, {Path: "C"}},
-		"B": []*Field{{Path: "D"}},
-		"C": []*Field{{Path: "E"}},
-		"D": []*Field{{Path: "C"}},
-		"E": []*Field{{Path: "B"}},
+	var deps = dependencies{
+		"A": {"B": struct{}{}, "C": struct{}{}},
+		"B": {"D": struct{}{}},
+		"C": {"E": struct{}{}},
+		"D": {"C": struct{}{}},
+		"E": {"B": struct{}{}},
 	}
 
 	var err error
@@ -144,4 +144,39 @@ func TestNewCycleError(t *testing.T) {
 	}
 
 	t.Log(err)
+}
+
+func TestDependencies(t *testing.T) {
+	var deps = dependencies{}
+	a := &Field{
+		Path: "A",
+	}
+	b := &Field{
+		Path: "B",
+	}
+	deps.add(a, b)
+	deps.add(b, a)
+
+	aDeps, ok := deps[a.Path]
+	if !ok {
+		t.Fatal("a path not found")
+	}
+
+	if _, ok := aDeps[b.Path]; !ok {
+		t.Fatal("b dependency not found")
+	}
+
+	deps.remove(a.Path)
+
+	if _, ok = deps[a.Path]; ok {
+		t.Fatal("a path still found")
+	}
+
+	bDeps, ok := deps[b.Path]
+	if !ok {
+		t.Fatal("b path not found")
+	}
+	if _, ok := bDeps[a.Path]; ok {
+		t.Fatal("a dependency found")
+	}
 }
