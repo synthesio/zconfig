@@ -169,8 +169,6 @@ func resolve(root *Field) (fields []*Field, err error) {
 		// If there was no resolved field, this means that there is a
 		// circular dependency because all remaining fields are
 		// dependent to at least another one.
-		// TODO Find the circular circuit and improve the error
-		// message.
 		if len(resolved) == 0 {
 			return nil, newCycleError(dependencies)
 		}
