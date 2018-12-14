@@ -91,6 +91,27 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	return field, nil
 }
 
+type dependencies map[Path]map[Path]struct{}
+
+func (d dependencies) add(f *Field, deps ...*Field) {
+	fDeps, ok := d[f.Path]
+	if !ok {
+		fDeps = make(map[Path]struct{})
+	}
+	for _, dep := range deps {
+		fDeps[dep.Path] = struct{}{}
+	}
+	d[f.Path] = fDeps
+}
+
+func (d dependencies) remove(path Path) {
+	delete(d, path)
+
+	for p := range d {
+		delete(d[p], path)
+	}
+}
+
 func resolve(root *Field) (fields []*Field, err error) {
 	// Do a stack-based depth-first-search to retrieve all fields, and
 	// identify the dependencies of the various fields.
@@ -99,7 +120,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 		paths        = make(map[Path]*Field)
 		sources      = make(map[InjectionKey]*Field)
 		targets      = make(map[*Field]InjectionKey)
-		dependencies = make(map[Path][]*Field)
+		dependencies = make(dependencies)
 	)
 	for len(stack) != 0 {
 		e := stack[len(stack)-1]
@@ -119,8 +140,8 @@ func resolve(root *Field) (fields []*Field, err error) {
 		}
 
 		// Safeguard against children and/or dependency modification
-		// later in the process by copying the slice right now.
-		dependencies[e.Path] = append([]*Field(nil), e.Children...)
+		// later in the process by copying the slice right now.]
+		dependencies.add(e, e.Children...)
 	}
 
 	// Inject the sources into the targets and add them to the dependencies
@@ -136,7 +157,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 			return nil, errors.Wrapf(err, "injecting field %s into %s", source.Path, target.Path)
 		}
 
-		dependencies[target.Path] = append(dependencies[target.Path], source)
+		dependencies.add(target, source)
 	}
 
 	// Resolve the dependency graph by finding fields that have no
@@ -151,24 +172,8 @@ func resolve(root *Field) (fields []*Field, err error) {
 			}
 
 			resolved = append(resolved, paths[path])
-			delete(dependencies, path)
-
-			// Remove the field from the other fields dependencies
-			// list. We find the index in the list and remove this
-			// index only (a field can be a dependency of another
-			// only once).
-			for fieldPath, deps := range dependencies {
-				var idx int = -1
-				for i, dep := range deps {
-					if dep.Path == path {
-						idx = i
-						break
-					}
-				}
-				if idx != -1 {
-					dependencies[fieldPath] = append(deps[:idx], deps[idx+1:]...)
-				}
-			}
+			// Remove the field from the other fields dependencies list
+			dependencies.remove(path)
 		}
 
 		// If there was no resolved field, this means that there is a
@@ -185,24 +190,24 @@ func resolve(root *Field) (fields []*Field, err error) {
 	return fields, nil
 }
 
-func newCycleError(dependencies map[Path][]*Field) error {
+func newCycleError(dependencies dependencies) error {
 	var paths [][]Path
 
 	for path, deps := range dependencies {
-		for _, field := range deps {
-			paths = append(paths, []Path{path, field.Path})
+		for depPath := range deps {
+			paths = append(paths, []Path{path, depPath})
 		}
 	}
 
 	for {
 		var next [][]Path
 		for _, path := range paths {
-			for _, field := range dependencies[path[len(path)-1]] {
-				if field.Path == path[0] {
+			for fieldPath := range dependencies[path[len(path)-1]] {
+				if fieldPath == path[0] {
 					return errors.Errorf("cycle detected: %s", buildCycle(path))
 				}
 
-				next = append(next, append(path, field.Path))
+				next = append(next, append(path, fieldPath))
 			}
 		}
 		paths = next
