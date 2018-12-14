@@ -10,7 +10,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Configure(s interface{}) error {
+type Hook func(field *Field) error
+
+type Repository struct {
+	hooks []Hook
+}
+
+var defaultRepository = Repository{
+	hooks: make([]Hook, 0),
+}
+
+func (r *Repository) Configure(s interface{}) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr {
@@ -31,9 +41,24 @@ func Configure(s interface{}) error {
 		return errors.Wrap(err, "resolving struct")
 	}
 
-	_ = fields
+	for _, hook := range r.hooks {
+		for _, field := range fields {
+			err := hook(field)
+			if err != nil {
+				return errors.Wrapf(err, "executing hook on field: %s", field.Path)
+			}
+		}
+	}
 
 	return nil
+}
+
+func AddHooks(hooks ...Hook) {
+	defaultRepository.hooks = append(defaultRepository.hooks, hooks...)
+}
+
+func Configure(s interface{}) error {
+	return defaultRepository.Configure(s)
 }
 
 type (
@@ -183,8 +208,12 @@ func resolve(root *Field) (fields []*Field, err error) {
 			return nil, newCycleError(dependencies)
 		}
 
-		// Resolved fields can be added to the result as is.
-		fields = append(fields, resolved...)
+		for _, res := range resolved {
+			// Do not add injection targets to resolved fields because their sources will also be added
+			if _, ok := res.InjectionTarget(); !ok {
+				fields = append(fields, res)
+			}
+		}
 	}
 
 	return fields, nil
