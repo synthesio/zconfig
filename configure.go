@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -73,14 +74,18 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	}
 
 	for i := 0; i < v.Type().NumField(); i++ {
-		child, err := walk(v.Field(i), v.Type().Field(i), field)
+		structField := v.Type().Field(i)
+		isExported := unicode.IsUpper([]rune(structField.Name)[0])
+		if !isExported {
+			continue
+		}
+
+		child, err := walk(v.Field(i), structField, field)
 		if err != nil {
 			return nil, err
 		}
 
-		if child.IsExported() {
-			field.Children = append(field.Children, child)
-		}
+		field.Children = append(field.Children, child)
 	}
 
 	return field, nil

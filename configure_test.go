@@ -8,10 +8,11 @@ import (
 )
 
 type Service struct {
-	Workers     int              `key:"workers"`
-	Dependency  SimpleDependency `key:"dependency" inject-as:"dependency"`
-	Injected    SimpleDependency `inject:"dependency"`
-	notExported SimpleDependency
+	Workers        int              `key:"workers"`
+	Dependency     SimpleDependency `key:"dependency" inject-as:"dependency"`
+	Injected       SimpleDependency `inject:"dependency"`
+	notExported    SimpleDependency
+	notExportedPtr *SimpleDependency
 }
 
 type SimpleDependency struct {
