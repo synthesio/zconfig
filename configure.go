@@ -16,9 +16,13 @@ type Repository struct {
 	hooks []Hook
 }
 
-var defaultRepository = Repository{
-	hooks: make([]Hook, 0),
+func NewRepository(hooks ...Hook) *Repository {
+	return &Repository{
+		hooks: hooks,
+	}
 }
+
+var defaultRepository = NewRepository()
 
 func (r *Repository) Configure(s interface{}) error {
 	v := reflect.ValueOf(s)
