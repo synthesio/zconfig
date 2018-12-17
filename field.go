@@ -2,6 +2,7 @@ package zconfig
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -10,19 +11,25 @@ import (
 const (
 	tagInjectAs = "inject-as"
 	tagInject   = "inject"
+	tagKey      = "key"
+	tagDefault  = "default"
 )
 
 type Field struct {
-	Value       reflect.Value
 	StructField *reflect.StructField
-	Parent      *Field
-	Children    []*Field
+	Value       reflect.Value
+	Path        string
 
-	Path Path
-	Tags *structtag.Tags
+	Parent   *Field
+	Children []*Field
+
+	Tags             *structtag.Tags
+	Key              string
+	Configurable     bool
+	ConfigurationKey string
 }
 
-func (f *Field) InjectionSource() (InjectionKey, bool) {
+func (f *Field) InjectionSource() (string, bool) {
 	if f.Tags == nil {
 		return "", false
 	}
@@ -30,10 +37,10 @@ func (f *Field) InjectionSource() (InjectionKey, bool) {
 	if err != nil {
 		return "", false
 	}
-	return InjectionKey(tag.Name), true
+	return tag.Name, true
 }
 
-func (f *Field) InjectionTarget() (InjectionKey, bool) {
+func (f *Field) InjectionTarget() (string, bool) {
 	if f.Tags == nil {
 		return "", false
 	}
@@ -41,7 +48,18 @@ func (f *Field) InjectionTarget() (InjectionKey, bool) {
 	if err != nil {
 		return "", false
 	}
-	return InjectionKey(tag.Name), true
+	return tag.Name, true
+}
+
+func (f *Field) Default() (string, bool) {
+	if f.Tags == nil {
+		return "", false
+	}
+	tag, err := f.Tags.Get(tagDefault)
+	if err != nil {
+		return "", false
+	}
+	return tagValue(tag), true
 }
 
 func (f *Field) Inject(s *Field) (err error) {
@@ -69,4 +87,20 @@ func (f *Field) IsLeaf() bool {
 	}
 
 	return f.Value.Type().Elem().Kind() != reflect.Struct
+}
+
+func (f *Field) IsAnonymous() bool {
+	if f.StructField == nil {
+		return true
+	}
+
+	return f.StructField.Anonymous
+}
+
+// tagValue returns the full, raw value of a tag. Structtag splits a tag value
+// into a "name" and "options", separated by commas, but some of our tags do
+// not follow this convention (e.g. full-text description, can contain commas).
+// This function puts name and options back together.
+func tagValue(tag *structtag.Tag) string {
+	return strings.Join(append([]string{tag.Name}, tag.Options...), ",")
 }

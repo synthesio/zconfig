@@ -21,5 +21,9 @@ func Initialize(field *Field) error {
 
 	// Initialize the element itself via the interface.
 	err := field.Value.Interface().(Initializable).Init()
-	return errors.Wrap(err, "initializing field")
+	if err != nil {
+		return errors.Wrap(err, "initializing field")
+	}
+
+	return nil
 }
