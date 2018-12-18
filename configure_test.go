@@ -185,11 +185,7 @@ func TestHooks_Execution(t *testing.T) {
 		return nil
 	}
 
-	testRepo := Repository{
-		hooks: []Hook{testHook},
-	}
-
-	err := testRepo.Configure(new(Service))
+	err := NewRepository(testHook).Configure(new(Service))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -221,11 +217,7 @@ func TestHooks_AllFields(t *testing.T) {
 		return nil
 	}
 
-	testRepo := Repository{
-		hooks: []Hook{testHook},
-	}
-
-	err := testRepo.Configure(new(Service))
+	err := NewRepository(testHook).Configure(new(Service))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,11 +229,7 @@ func TestHooks_Error(t *testing.T) {
 		return expected
 	}
 
-	testRepo := Repository{
-		hooks: []Hook{testHook},
-	}
-
-	err := testRepo.Configure(new(Service))
+	err := NewRepository(testHook).Configure(new(Service))
 	if err == nil {
 		t.Fatalf("expected an error, got nil")
 	}
