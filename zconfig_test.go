@@ -15,6 +15,7 @@ type S struct {
 	EE    EE `key:"ee"`
 	A     A  `key:"a" inject-as:"a"`
 	L     A  `inject:"a"`
+	M     M  `key:"m"`
 }
 
 type A struct {
@@ -38,6 +39,13 @@ type EE struct {
 	E
 }
 
+type M struct {
+	Foo int `key:"foo"`
+	N   struct {
+		unexp int
+	}
+}
+
 func TestConfigure(t *testing.T) {
 	var p = TestProvider{map[string]string{
 		"foo":     "a",
@@ -48,6 +56,7 @@ func TestConfigure(t *testing.T) {
 		"ee.r":    "4",
 		"ee.b":    "5",
 		"a.b.c.d": "6",
+		"m.foo":   "7",
 	}}
 	AddProvider(p)
 	var s S

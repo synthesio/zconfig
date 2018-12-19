@@ -73,20 +73,20 @@ func (r *Repository) Hook(f *Field) (err error) {
 
 	raw, found, err := r.Retrieve(f.ConfigurationKey)
 	if err != nil {
-		return errors.Wrapf(err, "configuring field %s: retrieving key %s", f.Path, f.Key)
+		return errors.Wrapf(err, "configuring field %s: retrieving key %s", f.Path, f.ConfigurationKey)
 	}
 
 	if !found {
 		def, ok := f.Default()
 		if !ok {
-			return errors.Errorf("configuring field %s: missing key %s", f.Path, f.Key)
+			return errors.Errorf("configuring field %s: missing key %s", f.Path, f.ConfigurationKey)
 		}
 		raw = def
 	}
 
 	res, err := r.Parse(f.Value.Type(), raw)
 	if err != nil {
-		return errors.Wrapf(err, "configuring field %s: parsing value for key %s", f.Path, f.Key)
+		return errors.Wrapf(err, "configuring field %s: parsing value for key %s", f.Path, f.ConfigurationKey)
 	}
 
 	if !f.Value.CanSet() {

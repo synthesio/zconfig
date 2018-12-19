@@ -11,6 +11,7 @@ var (
 
 func init() {
 	defaultProcessor.AddHooks(defaultRepository.Hook)
+	defaultProcessor.AddHooks(Initialize)
 
 	var env = new(EnvProvider)
 	env.Init()
@@ -21,7 +22,6 @@ func init() {
 	defaultRepository.AddProvider(args)
 
 	defaultRepository.AddParsers(defaultParsers...)
-
 }
 
 // Configure a service using the default processor.
