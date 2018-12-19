@@ -26,18 +26,18 @@ func (r *Repository) AddProvider(p Provider) {
 }
 
 // Retrieve a key from the provider, by priority order.
-func (r *Repository) Retrieve(key string) (value string, found bool, err error) {
+func (r *Repository) Retrieve(key string) (value, provider string, found bool, err error) {
 	for _, p := range r.providers {
 		value, found, err = p.Retrieve(key)
 		if err != nil {
-			return "", false, err
+			return "", "", false, err
 		}
 		if found {
-			return value, true, nil
+			return value, p.Name(), true, nil
 		}
 	}
 
-	return "", false, nil
+	return "", "", false, nil
 }
 
 // Register allow anyone to add a custom parser to the list.
@@ -71,7 +71,7 @@ func (r *Repository) Hook(f *Field) (err error) {
 		return nil
 	}
 
-	raw, found, err := r.Retrieve(f.ConfigurationKey)
+	raw, _, found, err := r.Retrieve(f.ConfigurationKey)
 	if err != nil {
 		return errors.Wrapf(err, "configuring field %s: retrieving key %s", f.Path, f.ConfigurationKey)
 	}

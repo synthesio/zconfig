@@ -44,7 +44,7 @@ func (p ParserFunc) Parse(typ reflect.Type, raw string) (val reflect.Value, err 
 	return val, nil
 }
 
-var defaultParsers = []Parser{
+var DefaultParsers = []Parser{
 	ParserFunc{reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem(), parseTextUnmarshaler},
 	ParserFunc{reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem(), parseBinaryUnmarshaler},
 	ParserFunc{reflect.TypeOf([]string(nil)), parseStringSlice},

@@ -12,7 +12,9 @@ type ArgsProvider struct {
 
 // Init fetch all keys available in the command-line and initialize the provider
 // internal storage.
-func (p *ArgsProvider) Init() {
+func NewArgsProvider() (p *ArgsProvider) {
+	p = new(ArgsProvider)
+
 	// Initialize the flags map.
 	p.Args = make(map[string]string, len(os.Args))
 
@@ -39,6 +41,8 @@ func (p *ArgsProvider) Init() {
 		parts = append(parts, "") // Avoid out-of-bound errors.
 		p.Args[parts[0]] = parts[1]
 	}
+
+	return p
 }
 
 // Retrieve will return the value from the parsed command-line arguments.
@@ -66,9 +70,11 @@ type EnvProvider struct {
 
 // Init fetch all keys available in the command-line and initialize the provider
 // internal storage.
-func (p *EnvProvider) Init() {
-	environ := os.Environ()
+func NewEnvProvider() (p *EnvProvider) {
+	p = new(EnvProvider)
+
 	// Initialize the flags map.
+	environ := os.Environ()
 	p.Env = make(map[string]string, len(environ))
 
 	// For each value, split around the first equal sign and set the
@@ -80,6 +86,8 @@ func (p *EnvProvider) Init() {
 		key := p.FormatKey(parts[0])
 		p.Env[key] = parts[1]
 	}
+
+	return p
 }
 
 // Retrieve will return the value from the parsed environment variables.
