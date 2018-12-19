@@ -79,7 +79,7 @@ func TestResolve(t *testing.T) {
 
 	displayResolvedGraph(t, fields)
 
-	expected := map[Path]struct{}{
+	expected := map[string]struct{}{
 		"root":                {},
 		"root.Workers":        {},
 		"root.Dependency":     {},
@@ -177,63 +177,65 @@ func TestDependencies(t *testing.T) {
 	}
 }
 
-func TestHooks_Execution(t *testing.T) {
-	executed := false
+func TestProcessorHooks(t *testing.T) {
+	t.Run("execution", func(t *testing.T) {
+		executed := false
 
-	testHook := func(field *Field) error {
-		executed = true
-		return nil
-	}
-
-	err := NewRepository(testHook).Configure(new(Service))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if !executed {
-		t.Fatal("hook was not executed")
-	}
-}
-
-func TestHooks_AllFields(t *testing.T) {
-	fields := map[Path]bool{
-		"root":                false,
-		"root.Workers":        false,
-		"root.Dependency":     false,
-		"root.Dependency.Foo": false,
-	}
-
-	testHook := func(field *Field) error {
-		visited, ok := fields[field.Path]
-		if !ok {
-			t.Fatalf("unexpected field: %s", field.Path)
-		}
-		if visited {
-			t.Fatalf("field %s already visited", field.Path)
+		testHook := func(field *Field) error {
+			executed = true
+			return nil
 		}
 
-		fields[field.Path] = true
+		err := NewProcessor(testHook).Process(new(Service))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
-		return nil
-	}
+		if !executed {
+			t.Fatal("hook was not executed")
+		}
+	})
 
-	err := NewRepository(testHook).Configure(new(Service))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
+	t.Run("fields", func(t *testing.T) {
+		fields := map[string]bool{
+			"root":                false,
+			"root.Workers":        false,
+			"root.Dependency":     false,
+			"root.Dependency.Foo": false,
+		}
 
-func TestHooks_Error(t *testing.T) {
-	expected := errors.New("an error")
-	testHook := func(field *Field) error {
-		return expected
-	}
+		testHook := func(field *Field) error {
+			visited, ok := fields[field.Path]
+			if !ok {
+				t.Fatalf("unexpected field: %s", field.Path)
+			}
+			if visited {
+				t.Fatalf("field %s already visited", field.Path)
+			}
 
-	err := NewRepository(testHook).Configure(new(Service))
-	if err == nil {
-		t.Fatalf("expected an error, got nil")
-	}
-	if errors.Cause(err) != expected {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			fields[field.Path] = true
+
+			return nil
+		}
+
+		err := NewProcessor(testHook).Process(new(Service))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		expected := errors.New("an error")
+		testHook := func(field *Field) error {
+			return expected
+		}
+
+		err := NewProcessor(testHook).Process(new(Service))
+		if err == nil {
+			t.Fatalf("expected an error, got nil")
+		}
+		if errors.Cause(err) != expected {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }

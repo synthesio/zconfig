@@ -13,7 +13,7 @@ func (i *initTest) Init() error {
 
 func TestInitialize(t *testing.T) {
 	initMe := new(initTest)
-	err := NewRepository(Initialize).Configure(initMe)
+	err := NewProcessor(Initialize).Process(initMe)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -4,27 +4,27 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
 )
 
-type Hook func(field *Field) error
-
-type Repository struct {
+// A Processor handle the service processing and execute hooks on the resulting
+// fields.
+type Processor struct {
+	lock  sync.Mutex
 	hooks []Hook
 }
 
-func NewRepository(hooks ...Hook) *Repository {
-	return &Repository{
+func NewProcessor(hooks ...Hook) *Processor {
+	return &Processor{
 		hooks: hooks,
 	}
 }
 
-var defaultRepository = NewRepository()
-
-func (r *Repository) Configure(s interface{}) error {
+func (p *Processor) Process(s interface{}) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr {
@@ -45,11 +45,13 @@ func (r *Repository) Configure(s interface{}) error {
 		return errors.Wrap(err, "resolving struct")
 	}
 
-	for _, hook := range r.hooks {
+	mark(root, "")
+
+	for _, hook := range p.hooks {
 		for _, field := range fields {
 			err := hook(field)
 			if err != nil {
-				return errors.Wrapf(err, "executing hook on field: %s", field.Path)
+				return errors.Wrapf(err, "executing hook on field %s", field.Path)
 			}
 		}
 	}
@@ -57,19 +59,9 @@ func (r *Repository) Configure(s interface{}) error {
 	return nil
 }
 
-func AddHooks(hooks ...Hook) {
-	defaultRepository.hooks = append(defaultRepository.hooks, hooks...)
+func (p *Processor) AddHooks(hooks ...Hook) {
+	p.hooks = append(p.hooks, hooks...)
 }
-
-func Configure(s interface{}) error {
-	return defaultRepository.Configure(s)
-}
-
-type (
-	Path         string
-	Key          string
-	InjectionKey string
-)
 
 func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err error) {
 	field = &Field{
@@ -81,10 +73,18 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 		field.Path = "root"
 	} else {
 		field.StructField = &s
-		field.Path = Path(fmt.Sprintf("%s.%s", p.Path, s.Name))
+		field.Path = fmt.Sprintf("%s.%s", p.Path, s.Name)
 		field.Tags, err = structtag.Parse(string(s.Tag))
 		if err != nil {
 			return nil, errors.Wrapf(err, "invalid tag for field %s", field.Path)
+		}
+
+		keyTag, err := field.Tags.Get(tagKey)
+		if err == nil {
+			field.Key = keyTag.Name
+			if field.Key == "" {
+				return field, errors.Errorf("invalid empty key for field %s", field.Path)
+			}
 		}
 	}
 
@@ -104,8 +104,7 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 
 	for i := 0; i < v.Type().NumField(); i++ {
 		structField := v.Type().Field(i)
-		isExported := unicode.IsUpper([]rune(structField.Name)[0])
-		if !isExported {
+		if !unicode.IsUpper([]rune(structField.Name)[0]) {
 			continue
 		}
 
@@ -120,12 +119,12 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	return field, nil
 }
 
-type dependencies map[Path]map[Path]struct{}
+type dependencies map[string]map[string]struct{}
 
 func (d dependencies) add(f *Field, deps ...*Field) {
 	fDeps, ok := d[f.Path]
 	if !ok {
-		fDeps = make(map[Path]struct{})
+		fDeps = make(map[string]struct{})
 	}
 	for _, dep := range deps {
 		fDeps[dep.Path] = struct{}{}
@@ -133,7 +132,7 @@ func (d dependencies) add(f *Field, deps ...*Field) {
 	d[f.Path] = fDeps
 }
 
-func (d dependencies) remove(path Path) {
+func (d dependencies) remove(path string) {
 	delete(d, path)
 
 	for p := range d {
@@ -146,9 +145,9 @@ func resolve(root *Field) (fields []*Field, err error) {
 	// identify the dependencies of the various fields.
 	var (
 		stack        = []*Field{root}
-		paths        = make(map[Path]*Field)
-		sources      = make(map[InjectionKey]*Field)
-		targets      = make(map[*Field]InjectionKey)
+		paths        = make(map[string]*Field)
+		sources      = make(map[string]*Field)
+		targets      = make(map[*Field]string)
 		dependencies = make(dependencies)
 	)
 	for len(stack) != 0 {
@@ -224,20 +223,20 @@ func resolve(root *Field) (fields []*Field, err error) {
 }
 
 func newCycleError(dependencies dependencies) error {
-	var paths [][]Path
+	var paths [][]string
 
 	for path, deps := range dependencies {
 		for depPath := range deps {
-			paths = append(paths, []Path{path, depPath})
+			paths = append(paths, []string{path, depPath})
 		}
 	}
 
 	for {
-		var next [][]Path
+		var next [][]string
 		for _, path := range paths {
 			for fieldPath := range dependencies[path[len(path)-1]] {
 				if fieldPath == path[0] {
-					return errors.Errorf("cycle detected: %s", buildCycle(path))
+					return errors.Errorf("cycle detected: %s", strings.Join(path, " -> "))
 				}
 
 				next = append(next, append(path, fieldPath))
@@ -247,10 +246,35 @@ func newCycleError(dependencies dependencies) error {
 	}
 }
 
-func buildCycle(paths []Path) string {
-	var spaths = make([]string, 0, len(paths))
-	for _, path := range paths {
-		spaths = append(spaths, string(path))
+func mark(f *Field, key string) bool {
+	// If the field has no key and isn't anonymous, we can safely mark it
+	// no-configurable.
+	if f.Key == "" && !f.IsAnonymous() {
+		return false
 	}
-	return strings.Join(spaths, " -> ")
+
+	if f.Key != "" {
+		key = key + "." + f.Key
+	}
+
+	if len(f.Children) == 0 {
+		f.Configurable = true
+		f.ConfigurationKey = key[1:]
+		return true
+	}
+
+	var children = 0
+	for _, c := range f.Children {
+		ok := mark(c, key)
+		if ok {
+			children += 1
+		}
+	}
+
+	if children == 0 && key != "" {
+		f.Configurable = true
+		f.ConfigurationKey = key[1:]
+	}
+
+	return children > 0
 }
