@@ -11,6 +11,7 @@ var (
 
 func init() {
 	defaultProcessor.AddHooks(defaultRepository.Hook)
+	defaultProcessor.AddHooks(Initialize)
 
 	var env = new(EnvProvider)
 	env.Init()
