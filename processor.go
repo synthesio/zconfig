@@ -246,23 +246,30 @@ func newCycleError(dependencies dependencies) error {
 	}
 }
 
+// Mark the configurable fields and compute their configuration key. Return
+// true if the current field or one of its children is configurable (used for
+// recursion.)
 func mark(f *Field, key string) bool {
-	// If the field has no key and isn't anonymous, we can safely mark it
-	// no-configurable.
-	if f.Key == "" && !f.IsAnonymous() {
-		return false
+	if f.Key == "" {
+		// A field with no key and that is not anonymous isn't
+		// configurable.
+		if !f.IsAnonymous() {
+			return false
+		}
+
+		// A field with no key, anonymous but without exported children
+		// isn't configurable either.
+		if len(f.Children) == 0 {
+			return false
+		}
 	}
 
+	// Derive the key if needed.
 	if f.Key != "" {
 		key = key + "." + f.Key
 	}
 
-	if len(f.Children) == 0 {
-		f.Configurable = true
-		f.ConfigurationKey = key[1:]
-		return true
-	}
-
+	// Mark the children and count the number of marked children.
 	var children = 0
 	for _, c := range f.Children {
 		ok := mark(c, key)
@@ -271,10 +278,19 @@ func mark(f *Field, key string) bool {
 		}
 	}
 
-	if children == 0 && key != "" {
+	// A field with no key at this point is anonymous. It can't be
+	// configured, but should return whether one of his children can be.
+	if f.Key == "" {
+		return children > 0
+
+	}
+
+	// If the field has no marked children at this point, mark it.
+	if children == 0 {
 		f.Configurable = true
 		f.ConfigurationKey = key[1:]
 	}
 
-	return children > 0
+	// A field with a key should always return true.
+	return true
 }
