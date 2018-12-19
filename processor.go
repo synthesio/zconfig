@@ -70,7 +70,7 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	}
 
 	if p == nil {
-		field.Path = "root"
+		field.Path = "$"
 	} else {
 		field.StructField = &s
 		field.Path = fmt.Sprintf("%s.%s", p.Path, s.Name)

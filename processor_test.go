@@ -28,12 +28,12 @@ func TestWalk(t *testing.T) {
 		t.Fatalf("walking service: %s", err)
 	}
 
-	expected := &Field{Path: "root", Children: []*Field{
-		{Path: "root.Workers"},
-		{Path: "root.Dependency", Children: []*Field{
-			{Path: "root.Dependency.Foo"},
+	expected := &Field{Path: "$", Children: []*Field{
+		{Path: "$.Workers"},
+		{Path: "$.Dependency", Children: []*Field{
+			{Path: "$.Dependency.Foo"},
 		}},
-		{Path: "root.Injected"},
+		{Path: "$.Injected"},
 	}}
 
 	displayGraph(t, root, 0)
@@ -80,10 +80,10 @@ func TestResolve(t *testing.T) {
 	displayResolvedGraph(t, fields)
 
 	expected := map[string]struct{}{
-		"root":                {},
-		"root.Workers":        {},
-		"root.Dependency":     {},
-		"root.Dependency.Foo": {},
+		"$":                {},
+		"$.Workers":        {},
+		"$.Dependency":     {},
+		"$.Dependency.Foo": {},
 	}
 
 	for _, field := range fields {
@@ -198,10 +198,10 @@ func TestProcessorHooks(t *testing.T) {
 
 	t.Run("fields", func(t *testing.T) {
 		fields := map[string]bool{
-			"root":                false,
-			"root.Workers":        false,
-			"root.Dependency":     false,
-			"root.Dependency.Foo": false,
+			"$":                false,
+			"$.Workers":        false,
+			"$.Dependency":     false,
+			"$.Dependency.Foo": false,
 		}
 
 		testHook := func(field *Field) error {
