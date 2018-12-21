@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	tagInjectAs = "inject-as"
-	tagInject   = "inject"
-	tagKey      = "key"
-	tagDefault  = "default"
+	TagInjectAs    = "inject-as"
+	TagInject      = "inject"
+	TagKey         = "key"
+	TagDefault     = "default"
+	TagDescription = "description"
 )
 
 type Field struct {
@@ -29,37 +30,26 @@ type Field struct {
 	ConfigurationKey string
 }
 
-func (f *Field) InjectionSource() (string, bool) {
+func (f *Field) Tag(name string) (string, bool) {
 	if f.Tags == nil {
 		return "", false
 	}
-	tag, err := f.Tags.Get(tagInjectAs)
+	tag, err := f.Tags.Get(name)
 	if err != nil {
 		return "", false
 	}
 	return tag.Name, true
 }
 
-func (f *Field) InjectionTarget() (string, bool) {
+func (f *Field) FullTag(name string) (string, bool) {
 	if f.Tags == nil {
 		return "", false
 	}
-	tag, err := f.Tags.Get(tagInject)
+	tag, err := f.Tags.Get(name)
 	if err != nil {
 		return "", false
 	}
-	return tag.Name, true
-}
-
-func (f *Field) Default() (string, bool) {
-	if f.Tags == nil {
-		return "", false
-	}
-	tag, err := f.Tags.Get(tagDefault)
-	if err != nil {
-		return "", false
-	}
-	return tagValue(tag), true
+	return strings.Join(append([]string{tag.Name}, tag.Options...), ","), true
 }
 
 func (f *Field) Inject(s *Field) (err error) {
@@ -76,7 +66,7 @@ func (f *Field) Inject(s *Field) (err error) {
 }
 
 func (f *Field) IsLeaf() bool {
-	if _, isInjected := f.InjectionTarget(); isInjected {
+	if _, isInjected := f.Tag(TagInject); isInjected {
 		return true
 	}
 
@@ -95,12 +85,4 @@ func (f *Field) IsAnonymous() bool {
 	}
 
 	return f.StructField.Anonymous
-}
-
-// tagValue returns the full, raw value of a tag. Structtag splits a tag value
-// into a "name" and "options", separated by commas, but some of our tags do
-// not follow this convention (e.g. full-text description, can contain commas).
-// This function puts name and options back together.
-func tagValue(tag *structtag.Tag) string {
-	return strings.Join(append([]string{tag.Name}, tag.Options...), ",")
 }
