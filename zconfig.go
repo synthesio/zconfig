@@ -7,11 +7,15 @@ import (
 var (
 	defaultRepository Repository
 	defaultProcessor  Processor
+	Args              *ArgsProvider
+	Env               *EnvProvider
 )
 
 func init() {
-	defaultRepository.AddProvider(NewEnvProvider())
-	defaultRepository.AddProvider(NewArgsProvider())
+	Args = NewArgsProvider()
+	Env = NewEnvProvider()
+	defaultRepository.AddProvider(Args)
+	defaultRepository.AddProvider(Env)
 	defaultRepository.AddParsers(DefaultParsers...)
 	defaultProcessor.AddHooks(defaultRepository.Hook)
 	defaultProcessor.AddHooks(Initialize)

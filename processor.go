@@ -2,9 +2,12 @@ package zconfig
 
 import (
 	"fmt"
+	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
+	"text/tabwriter"
 	"unicode"
 
 	"github.com/fatih/structtag"
@@ -47,6 +50,11 @@ func (p *Processor) Process(s interface{}) error {
 
 	mark(root, "")
 
+	if _, ok, _ := Args.Retrieve("help"); ok {
+		usage(fields)
+		os.Exit(0)
+	}
+
 	for _, hook := range p.hooks {
 		for _, field := range fields {
 			err := hook(field)
@@ -79,9 +87,9 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 			return nil, errors.Wrapf(err, "invalid tag for field %s", field.Path)
 		}
 
-		keyTag, err := field.Tags.Get(tagKey)
-		if err == nil {
-			field.Key = keyTag.Name
+		key, ok := field.Tag(TagKey)
+		if ok {
+			field.Key = key
 			if field.Key == "" {
 				return field, errors.Errorf("invalid empty key for field %s", field.Path)
 			}
@@ -156,14 +164,14 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		paths[e.Path] = e
 
-		if key, ok := e.InjectionSource(); ok {
+		if key, ok := e.Tag(TagInjectAs); ok {
 			if s, ok := sources[key]; ok {
 				return nil, errors.Errorf("injection source key %s already defined at path %s", key, s.Path)
 			}
 			sources[key] = e
 		}
 
-		if key, ok := e.InjectionTarget(); ok {
+		if key, ok := e.Tag(TagInject); ok {
 			targets[e] = key
 		}
 
@@ -213,7 +221,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		for _, res := range resolved {
 			// Do not add injection targets to resolved fields because their sources will also be added
-			if _, ok := res.InjectionTarget(); !ok {
+			if _, ok := res.Tag(TagInject); !ok {
 				fields = append(fields, res)
 			}
 		}
@@ -293,4 +301,32 @@ func mark(f *Field, key string) bool {
 
 	// A field with a key should always return true.
 	return true
+}
+
+func usage(fields []*Field) {
+	var keys []string
+	var options = make(map[string]*Field)
+	for _, f := range fields {
+		if !f.Configurable {
+			continue
+		}
+		keys = append(keys, f.ConfigurationKey)
+		options[f.ConfigurationKey] = f
+	}
+	sort.Strings(keys)
+
+	fmt.Printf("\nKeys:\n")
+	w := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
+	for _, key := range keys {
+		field := options[key]
+
+		def, ok := field.FullTag(TagDefault)
+		desc, _ := field.FullTag(TagDescription)
+		if ok {
+			fmt.Fprintf(w, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
+		} else {
+			fmt.Fprintf(w, "%s\t%s\t%s\t\n", key, Env.FormatKey(key), desc)
+		}
+	}
+	_ = w.Flush()
 }
