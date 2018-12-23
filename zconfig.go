@@ -7,18 +7,14 @@ import (
 var (
 	defaultRepository Repository
 	defaultProcessor  Processor
-	Args              *ArgsProvider
-	Env               *EnvProvider
+	Args              = NewArgsProvider()
+	Env               = NewEnvProvider()
 )
 
 func init() {
-	Args = NewArgsProvider()
-	Env = NewEnvProvider()
-	defaultRepository.AddProvider(Args)
-	defaultRepository.AddProvider(Env)
+	defaultRepository.AddProviders(Args, Env)
 	defaultRepository.AddParsers(DefaultParsers...)
-	defaultProcessor.AddHooks(defaultRepository.Hook)
-	defaultProcessor.AddHooks(Initialize)
+	defaultProcessor.AddHooks(defaultRepository.Hook, Initialize)
 }
 
 // Configure a service using the default processor.
@@ -44,8 +40,8 @@ type Provider interface {
 }
 
 // Add a provider to the default repository.
-func AddProvider(p Provider) {
-	defaultRepository.AddProvider(p)
+func AddProviders(providers ...Provider) {
+	defaultRepository.AddProviders(providers...)
 }
 
 // Parser is the interface implemented by a struct that can convert a raw
