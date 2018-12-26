@@ -58,7 +58,7 @@ func TestConfigure(t *testing.T) {
 		"a.b.c.d": "6",
 		"m.foo":   "7",
 	}}
-	AddProvider(p)
+	AddProviders(p)
 	var s S
 	err := Configure(&s)
 	if err != nil {

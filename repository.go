@@ -16,10 +16,10 @@ type Repository struct {
 }
 
 // Register a new Provider in this repository.
-func (r *Repository) AddProvider(p Provider) {
+func (r *Repository) AddProviders(providers ...Provider) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	r.providers = append(r.providers, p)
+	r.providers = append(r.providers, providers...)
 	sort.Slice(r.providers, func(a, b int) bool {
 		return r.providers[a].Priority() < r.providers[b].Priority()
 	})
