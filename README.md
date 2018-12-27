@@ -1,12 +1,13 @@
 # zConfig [![Build Status](https://travis-ci.org/synthesio/zconfig.svg?branch=master)](https://travis-ci.org/synthesio/zconfig) [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/synthesio/zconfig) [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://raw.githubusercontent.com/synthesio/zconfig/master/LICENSE.md)
 
 `zConfig` is a Golang, extensible, reflection-based configuration and
-dependency injection tool.
+dependency injection tool whose goal is to get rid of the boilerplate code
+needed to configure and initialize an application's dependencies.
 
 ## Usage
 
 _zconfig_ primary feature is an extensible configuration repository. To use it,
-simply define a configuration struture and feed it to the `zconfig.Configure`
+simply define a configuration struture and feed it to the `Configure()`
 method. You can use the `key`, `description`and `default` tags to define which
 key to use.
 
@@ -33,7 +34,7 @@ Once compiled, the special flag `help` can be passed to the binary to display a
 list of the available configuration keys, in their cli and env form, as well as
 their description and default values.
 
-```bash
+```shell
 $ ./a.out --help
 Keys:
 addr	ADDR	address the server should bind to	(:80)
@@ -63,18 +64,30 @@ func main() {
 }
 ```
 
-```bash
+```shell
 $ ./a.out --help
 Keys:
 server.addr	SERVER_ADDR	address the server should bind to	(:80)
 ```
 
+The following types are handled by default by the library:
+
+* `encoding.TextUnmarshaller`
+* `encoding.BinaryUnmarshaller`
+* `(u)?int(32|64)?`
+* `float(32|64)`
+* `string`
+* `[]string`
+* `bool`
+* `time.Duration`
+* `regexp.Regexp`
+
+
 ### Initialization
 
 _zconfig_ does handle dependency initialization. Any reachable field of your
 configuration struct (whatever the nesting level) that implements the
-`zconfig.Initializable` interface will be `Init`ed during the configuration
-process.
+`Initializable` interface will be initialized during the configuration process.
 
 Here is an example with our internal Redis wrapper.
 
@@ -164,78 +177,203 @@ need your injection source or target to be part of a chain of `key`ed structs.
 Also, _zconfig_ will return an error if given a struct with a cycle in it, the
 same way the compiler will refuse compiling a type definition with cycles.
 
-## Repository
+## How it works
 
-The configuration of the fields by the processor is deleguated to a
-configuration repository. A repository is a list of _providers_ and _parsers_
-than respectively retrieve configuration key's raw values and transform them
-into the expected value. The configuration itself is done via a _hook_ added to
-the default provider.
+Under the hood, the work is done by a
+[`Processor`](https://godoc.org/github.com/synthesio/zconfig#Processor).
+The _Processor_'s role is to construct a list of `Field` from the given
+struct, and run a number of hooks on this list.
 
-### Providers
+The `Field` struct is a graph representation of a single field of your
+configuration struct, with pointers for parent and children. The list of fields
+handled by the processor is ordered by deepest dependency first, meaning that
+for any given hook, all children of a given field are processed by the hook
+before the field itself.  For the case of injection, the targets aren't
+included in this list, but the sources are processed before the target's
+branch.
 
-The repository is based around a slice of structs implementing the
-`zconfig.Provider` interface. Each provider has a name and priority and they
-are requested in priority order when a key is needed.
+For convenience, _zconfig_ provides a default processor already setup to use 2
+hooks: the first is the one that do the actual configuration of the fields, and
+the second do the initialization of the field. The global `Configure()` and
+`AddHooks()` methods are shortcuts to the methods of this default processor.
 
-The `args` and `env` providers are registered on the default provider, and
-instances are exposed as `zconfig.Args` and `zconfig.Env` for convenience so
-you can use them for other purposes, like getting the path for a `YAMLProvider`
-file for example.
+### Hook
 
-You can use the `zconfig.Repository.AddProviders(...zconfig.Provider)` method
-to add a new provider to a given repository, or the
-`zconfig.AddProviders(...zconfig.Provider)` shortcut to add one to the default
-repository.
-
-### Parsers
-
-Parsing the raw string values into the actual variables for the configuration
-struct is handled by the configuration repository. The repository holds a slice
-of `zconfig.Parser` called in order until one of them is able to handle the
-type of the destination field.
-
-The following types actually have parsers in the default repository:
-
-* `encoding.TextUnmarshaller`
-* `encoding.BinaryUnmarshaller`
-* `(u)?int(32|64)?`
-* `float(32|64)`
-* `string`
-* `[]string`
-* `bool`
-* `time.Duration`
-* `regexp.Regexp`
-
-You can use the `zconfig.Repository.AddParsers(...zconfig.Parser)` method to
-add a new parser to a given repository, or the
-`zconfig.AddParsers(...zconfig.Parser)` shortcut to add to the default
-repository.
-
-For convenience, the various parsers of the default repository are available as
-`zconfig.DefaultParsers`.
-
-## Hooks
-
-The standard way to extend the behavior of _zconfig_ is to implement a new
-_hook_. The default `Processor` uses two of them: the `zconfig.Repository.Hook`
-and the `zconfig.Initialize` hook.
-
-Once the configuration struct is parsed and verified, the processor runs each
-hook registered on the fields of the struct, allowing custom behavior to be
-implemented for your systems. The interface for a hook is really simple:
+The `Hook` is a type for a function that takes a single pointer to a `Field` as
+parameter, and returns an error if need be.
 
 ```go
 type Hook func(field *Field) error
 ```
 
-Each encountered field will be passed to the hook, lowest dependencies first,
-meaning that you can assume that the hook was executed on any child of the
-current field before the field itself. The fields that have a configuration key
-can be distinguished by the `Configurable` bool attribute being `true`. Note that
-the hooks aren't executed on the injection targets to avoid  processing them
-twice.
+One good example of hook is the one used for initializing the fields:
 
-You can use the `zconfig.Processor.AddHooks(...zconfig.Hook)` method to add a
-new hook to a given processor, or the `zconfig.AddHooks(...zconfig.Hook)`
-shortcut to add one to the default processor.
+```go
+type Initializable interface {
+	Init() error
+}
+
+// Used for type comparison.
+var typeInitializable = reflect.TypeOf((*Initializable)(nil)).Elem()
+
+func Initialize(field *Field) error {
+	// Not initializable, nothing to do.
+	if !field.Value.Type().Implements(typeInitializable) {
+		return nil
+	}
+
+	// Initialize the element itself via the interface.
+	err := field.Value.Interface().(Initializable).Init()
+	if err != nil {
+		return errors.Wrap(err, "initializing field")
+	}
+
+	return nil
+}
+```
+
+### Repository
+
+The first hook setup in the default processor, and the main feature of the
+library, is the configuration repository hook. The `Repository` is a struct
+holding a list of `Provider` and `Parser` interfaces used by the hook to
+set the values of the configuration struct.
+
+#### Provider
+
+A _provider_ is a simple interface for retrieving the value associated with a
+key. Each provider listed by the repository is consulted until one of them
+returns a result. 
+
+```go
+type Provider interface {
+	Retrieve(key string) (value string, found bool, err error)
+	Name() string
+	Priority() int
+}
+```
+
+The `Retrieve()` method gets a configuration _key_ and return the raw value
+associated with it, whether it found something or not, and whether an error
+occurred during the process.
+
+The `Priority()` method defines the order in which the providers are checked by
+the repository, the lowest going first. The `ArgsProvider` is priority 1, and
+the `EnvProvider` is priority 2.
+
+The `Name()` method helps to know which source provided the value, which can be
+useful for various repository extensions.
+
+A provider can be added to a repository using the `AddProviders()` method.
+
+For example, the default repository has two providers registered: the
+`ArgsProvider` that look on the CLI arguments and the `EnvProvider` that look
+at the program's environment.
+
+#### Parser
+
+A _parser_ is an interface for converting a raw `string` value to a
+`reflect.Value` used by the repository's hook.
+
+```go
+type Parser interface {
+	Parse(reflect.Type, string) (reflect.Value, error)
+	CanParse(reflect.Type) bool
+}
+```
+
+The `CanParse()` method allows the repository to find a suitable parser given
+the destination type of a field.
+
+The `Parse()` method does the actual job of translating a raw value into a
+parsed value that the destination field can be set to.
+
+The default repository has a certain number of parser registered. This list is
+exported as `DefaultParsers` so custom repositories can use the same list or
+even extend it.
+
+## Frequently Asked Questions
+
+### _How can I disable the CLI flags?_
+
+Remove them from the providers of your repository. For the classic processor,
+you want to do this:
+
+```go
+var repository zconfig.Repository
+repository.AddProviders(zconfig.Env)
+repository.AddParsers(zconfig.DefaultParsers...)
+
+var processor zconfig.Processor
+processor.AddHooks(repository.Hook, zconfig.Initialize)
+```
+
+### _I want to validate the values from the configuration before using them_
+
+First obvious way would be to use custom types implementing the
+`encoding.TextUnmarshaller` interface and do the check here. That would add
+being explicit in the configuration by having the advantage of not allowing
+inconsistent state. In the same web-form validation style, you could add
+additional validation tags to your struct and create a hook to check that the
+value matches the rules.
+
+Another way would be to do it in the `Init()` method of your field, so the
+initialization hook will handle the check. This has the advantage of not
+forcing custom types for the runtime types, and having the ability to
+cross-check multiple fields by using the parent's struct method.
+
+### _Can I configure multiple structs during the program's lifetime?_
+
+Of course. The `Processor.Process()` method is completely self-contained, and
+doesn't use any state from the `Processor` except the list of hooks to apply.
+Same thing goes for the `Repository` and the basic `Provider` of _zconfig_.
+
+### _I want to read my configuration from "insert source name here"_
+
+What you want is a custom provider. If the set provided by _zconfig_ itself
+doesn't cover your way of defining configuration, you can always add one to the
+default repository (or define your own).
+
+Here is a quick-and-dirty example you can use as basis for a provider getting
+its values from an arbitrary JSON file.
+
+```go
+import "github.com/tidwall/gjson"
+
+type JSONProvider struct {
+	raw gjson.Result
+}
+
+func (p JSONProvider) Retrieve(key string) (raw string, found bool, err error) {
+	field := p.raw.Get(key)
+	return raw.String(), field.Exists(), nil
+}
+
+func (JSONProvider) Name() string {
+	return "json"
+}
+
+func (JSONProvider) Priority() int {
+	// args are 1, env are 2, we want both of them to override the
+	// configuration file so we set this provider to be looked at after
+	// them.
+	return 3
+}
+
+func NewJSONProvider(path string) (*JSONProvider, err error) {
+	raw, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "reading field %s", path)
+	}
+
+	if !gjson.ValidBytes(raw) {
+		return nil, errors.Errorf("invalid json file %s", path)
+	}
+
+	return  &JSONProvider{gjson.ParseBytes(raw)}, nil
+}
+```
+
+Amongst the improvements possible, this provider could be constructed using a
+value retrieved from `zconfig.Args` or `zconfig.Env` so the path can be given
+on the command-line of your program.
