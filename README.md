@@ -360,7 +360,7 @@ func (JSONProvider) Priority() int {
 	return 3
 }
 
-func NewJSONProvider(path string) (*JSONProvider, err error) {
+func NewJSONProviderFromFile(path string) (*JSONProvider, err error) {
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading field %s", path)
@@ -374,6 +374,28 @@ func NewJSONProvider(path string) (*JSONProvider, err error) {
 }
 ```
 
+The library `tidwall/gjson` is an alternative library for manipulating JSON
+that fits this use case particularly well: it doesn't parse the whole string,
+and only look for the field identified by the given key (whose format match the
+_zconfig_ one.)
+
 Amongst the improvements possible, this provider could be constructed using a
 value retrieved from `zconfig.Args` or `zconfig.Env` so the path can be given
 on the command-line of your program.
+
+For example:
+
+```go
+func NewJSONProvider() (*JSONProvider, err error) {
+	path, ok, err := zconfig.Args.Retrieve("configuration")
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return &JSONProvider{}, nil
+	}
+
+	return NewJSONProviderFromFile(path)
+}
+```
