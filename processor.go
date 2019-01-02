@@ -9,8 +9,6 @@ import (
 	"sync"
 	"text/tabwriter"
 	"unicode"
-
-	"github.com/fatih/structtag"
 )
 
 // A Processor handle the service processing and execute hooks on the resulting
@@ -79,14 +77,11 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	if p == nil {
 		field.Path = "$"
 	} else {
-		field.StructField = &s
 		field.Path = fmt.Sprintf("%s.%s", p.Path, s.Name)
-		field.Tags, err = structtag.Parse(string(s.Tag))
-		if err != nil {
-			return nil, fmt.Errorf("invalid tag for field %s: %s", field.Path, err)
-		}
+		field.Anonymous = s.Anonymous
+		field.Tags = s.Tag
 
-		key, ok := field.Tag(TagKey)
+		key, ok := field.Tags.Lookup(TagKey)
 		if ok {
 			field.Key = key
 			if field.Key == "" {
@@ -163,14 +158,14 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		paths[e.Path] = e
 
-		if key, ok := e.Tag(TagInjectAs); ok {
+		if key, ok := e.Tags.Lookup(TagInjectAs); ok {
 			if s, ok := sources[key]; ok {
 				return nil, fmt.Errorf("injection source key %s already defined at path %s", key, s.Path)
 			}
 			sources[key] = e
 		}
 
-		if key, ok := e.Tag(TagInject); ok {
+		if key, ok := e.Tags.Lookup(TagInject); ok {
 			targets[e] = key
 		}
 
@@ -220,7 +215,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		for _, res := range resolved {
 			// Do not add injection targets to resolved fields because their sources will also be added
-			if _, ok := res.Tag(TagInject); !ok {
+			if _, ok := res.Tags.Lookup(TagInject); !ok {
 				fields = append(fields, res)
 			}
 		}
@@ -260,7 +255,7 @@ func mark(f *Field, key string) bool {
 	if f.Key == "" {
 		// A field with no key and that is not anonymous isn't
 		// configurable.
-		if !f.IsAnonymous() {
+		if !f.Anonymous {
 			return false
 		}
 
@@ -319,8 +314,8 @@ func usage(fields []*Field) {
 	for _, key := range keys {
 		field := options[key]
 
-		def, ok := field.FullTag(TagDefault)
-		desc, _ := field.FullTag(TagDescription)
+		def, ok := field.Tags.Lookup(TagDefault)
+		desc, _ := field.Tags.Lookup(TagDescription)
 		if ok {
 			fmt.Fprintf(w, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
 		} else {

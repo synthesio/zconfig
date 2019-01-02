@@ -76,7 +76,7 @@ func (r *Repository) Hook(f *Field) (err error) {
 	}
 
 	if !found {
-		def, ok := f.FullTag(TagDefault)
+		def, ok := f.Tags.Lookup(TagDefault)
 		if !ok {
 			return fmt.Errorf("configuring field %s: missing key %s", f.Path, f.ConfigurationKey)
 		}

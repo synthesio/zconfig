@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Removed
 - Dependency to the `github.com/pkg/errors` package
+- Dependency to the `github.com/fatih/structtag` package
 
 ## 1.0.0 - 2018-12-26
 ### Added
