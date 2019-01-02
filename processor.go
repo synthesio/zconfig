@@ -11,7 +11,6 @@ import (
 	"unicode"
 
 	"github.com/fatih/structtag"
-	"github.com/pkg/errors"
 )
 
 // A Processor handle the service processing and execute hooks on the resulting
@@ -31,21 +30,21 @@ func (p *Processor) Process(s interface{}) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr {
-		return errors.Errorf("expected pointer to struct, %T given", s)
+		return fmt.Errorf("expected pointer to struct, %T given", s)
 	}
 
 	if v.Elem().Kind() != reflect.Struct {
-		return errors.Errorf("expected pointer to struct, %T given", s)
+		return fmt.Errorf("expected pointer to struct, %T given", s)
 	}
 
 	root, err := walk(v, reflect.StructField{}, nil)
 	if err != nil {
-		return errors.Wrap(err, "walking struct")
+		return fmt.Errorf("walking struct: %s", err)
 	}
 
 	fields, err := resolve(root)
 	if err != nil {
-		return errors.Wrap(err, "resolving struct")
+		return fmt.Errorf("resolving struct: %s", err)
 	}
 
 	mark(root, "")
@@ -59,7 +58,7 @@ func (p *Processor) Process(s interface{}) error {
 		for _, field := range fields {
 			err := hook(field)
 			if err != nil {
-				return errors.Wrapf(err, "executing hook on field %s", field.Path)
+				return fmt.Errorf("executing hook on field %s: %s", field.Path, err)
 			}
 		}
 	}
@@ -84,14 +83,14 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 		field.Path = fmt.Sprintf("%s.%s", p.Path, s.Name)
 		field.Tags, err = structtag.Parse(string(s.Tag))
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid tag for field %s", field.Path)
+			return nil, fmt.Errorf("invalid tag for field %s: %s", field.Path, err)
 		}
 
 		key, ok := field.Tag(TagKey)
 		if ok {
 			field.Key = key
 			if field.Key == "" {
-				return field, errors.Errorf("invalid empty key for field %s", field.Path)
+				return field, fmt.Errorf("invalid empty key for field %s", field.Path)
 			}
 		}
 	}
@@ -99,7 +98,7 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			if !v.CanSet() {
-				return nil, errors.Errorf("cannot address %s for path %s", v.Type(), field.Path)
+				return nil, fmt.Errorf("cannot address %s for path %s", v.Type(), field.Path)
 			}
 			v.Set(reflect.New(v.Type().Elem()))
 		}
@@ -166,7 +165,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		if key, ok := e.Tag(TagInjectAs); ok {
 			if s, ok := sources[key]; ok {
-				return nil, errors.Errorf("injection source key %s already defined at path %s", key, s.Path)
+				return nil, fmt.Errorf("injection source key %s already defined at path %s", key, s.Path)
 			}
 			sources[key] = e
 		}
@@ -185,12 +184,12 @@ func resolve(root *Field) (fields []*Field, err error) {
 	for target, key := range targets {
 		source, ok := sources[key]
 		if !ok {
-			return nil, errors.Errorf("injection source key %s undefined for path %s", key, target.Path)
+			return nil, fmt.Errorf("injection source key %s undefined for path %s", key, target.Path)
 		}
 
 		err := target.Inject(source)
 		if err != nil {
-			return nil, errors.Wrapf(err, "injecting field %s into %s", source.Path, target.Path)
+			return nil, fmt.Errorf("injecting field %s into %s: %s", source.Path, target.Path, err)
 		}
 
 		dependencies.add(target, source)
@@ -244,7 +243,7 @@ func newCycleError(dependencies dependencies) error {
 		for _, path := range paths {
 			for fieldPath := range dependencies[path[len(path)-1]] {
 				if fieldPath == path[0] {
-					return errors.Errorf("cycle detected: %s", strings.Join(path, " -> "))
+					return fmt.Errorf("cycle detected: %s", strings.Join(path, " -> "))
 				}
 
 				next = append(next, append(path, fieldPath))

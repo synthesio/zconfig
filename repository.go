@@ -1,11 +1,10 @@
 package zconfig
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // A Repository is list of configuration providers and hooks.
@@ -57,13 +56,13 @@ func (r *Repository) Parse(typ reflect.Type, parameter string) (val reflect.Valu
 
 		val, err = p.Parse(typ, parameter)
 		if err != nil {
-			return val, errors.Wrapf(err, "unable to parse %s", typ)
+			return val, fmt.Errorf("unable to parse %s: %s", typ, err)
 		}
 
 		return val, nil
 	}
 
-	return val, errors.Errorf("no parser for type %s", typ)
+	return val, fmt.Errorf("no parser for type %s", typ)
 }
 
 func (r *Repository) Hook(f *Field) (err error) {
@@ -73,24 +72,24 @@ func (r *Repository) Hook(f *Field) (err error) {
 
 	raw, _, found, err := r.Retrieve(f.ConfigurationKey)
 	if err != nil {
-		return errors.Wrapf(err, "configuring field %s: retrieving key %s", f.Path, f.ConfigurationKey)
+		return fmt.Errorf("configuring field %s: retrieving key %s: %s", f.Path, f.ConfigurationKey, err)
 	}
 
 	if !found {
 		def, ok := f.FullTag(TagDefault)
 		if !ok {
-			return errors.Errorf("configuring field %s: missing key %s", f.Path, f.ConfigurationKey)
+			return fmt.Errorf("configuring field %s: missing key %s", f.Path, f.ConfigurationKey)
 		}
 		raw = def
 	}
 
 	res, err := r.Parse(f.Value.Type(), raw)
 	if err != nil {
-		return errors.Wrapf(err, "configuring field %s: parsing value for key %s", f.Path, f.ConfigurationKey)
+		return fmt.Errorf("configuring field %s: parsing value for key %s: %s", f.Path, f.ConfigurationKey, err)
 	}
 
 	if !f.Value.CanSet() {
-		return errors.Errorf("configuring field %s: can't set value", f.Path)
+		return fmt.Errorf("configuring field %s: can't set value", f.Path)
 	}
 
 	f.Value.Set(res)

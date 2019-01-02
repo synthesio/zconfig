@@ -1,9 +1,8 @@
 package zconfig
 
 import (
+	"fmt"
 	"reflect"
-
-	"github.com/pkg/errors"
 )
 
 type Initializable interface {
@@ -22,7 +21,7 @@ func Initialize(field *Field) error {
 	// Initialize the element itself via the interface.
 	err := field.Value.Interface().(Initializable).Init()
 	if err != nil {
-		return errors.Wrap(err, "initializing field")
+		return fmt.Errorf("initializing field: %s", err)
 	}
 
 	return nil

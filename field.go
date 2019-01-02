@@ -1,11 +1,11 @@
 package zconfig
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/fatih/structtag"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -54,11 +54,11 @@ func (f *Field) FullTag(name string) (string, bool) {
 
 func (f *Field) Inject(s *Field) (err error) {
 	if !s.Value.Type().AssignableTo(f.Value.Type()) {
-		return errors.Errorf("cannot inject %s into %s for field %s", s.Value.Type(), f.Value.Type(), f.Path)
+		return fmt.Errorf("cannot inject %s into %s for field %s", s.Value.Type(), f.Value.Type(), f.Path)
 	}
 
 	if !f.Value.CanSet() {
-		return errors.Errorf("cannot address %s for injection", f.Value.Type())
+		return fmt.Errorf("cannot address %s for injection", f.Value.Type())
 	}
 
 	f.Value.Set(s.Value)
