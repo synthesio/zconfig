@@ -1,12 +1,11 @@
 package zconfig
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type Service struct {
@@ -225,16 +224,15 @@ func TestProcessorHooks(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		expected := errors.New("an error")
 		testHook := func(field *Field) error {
-			return expected
+			return errors.New("an error")
 		}
 
 		err := NewProcessor(testHook).Process(new(Service))
 		if err == nil {
 			t.Fatalf("expected an error, got nil")
 		}
-		if errors.Cause(err) != expected {
+		if !strings.HasPrefix(err.Error(), "executing hook on field") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})

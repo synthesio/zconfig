@@ -2,13 +2,12 @@ package zconfig
 
 import (
 	"encoding"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type ParserFunc struct {
@@ -25,7 +24,7 @@ func (p ParserFunc) Parse(typ reflect.Type, raw string) (val reflect.Value, err 
 	withPointer := reflect.PtrTo(typ).AssignableTo(p.Type)
 
 	if !withValue && !withPointer {
-		return val, errors.Errorf("cannot parse %s", typ)
+		return val, fmt.Errorf("cannot parse %s", typ)
 	}
 
 	if withPointer {
@@ -34,7 +33,7 @@ func (p ParserFunc) Parse(typ reflect.Type, raw string) (val reflect.Value, err 
 
 	val, err = p.Func(typ, raw)
 	if err != nil {
-		return val, errors.Wrapf(err, "unable to parse %s", typ)
+		return val, fmt.Errorf("unable to parse %s: %s", typ, err)
 	}
 
 	if withPointer {
