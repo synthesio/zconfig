@@ -3,9 +3,6 @@ package zconfig
 import (
 	"fmt"
 	"reflect"
-	"strings"
-
-	"github.com/fatih/structtag"
 )
 
 const (
@@ -17,39 +14,17 @@ const (
 )
 
 type Field struct {
-	StructField *reflect.StructField
-	Value       reflect.Value
-	Path        string
+	Value     reflect.Value
+	Path      string
+	Anonymous bool
+	Tags      reflect.StructTag
 
 	Parent   *Field
 	Children []*Field
 
-	Tags             *structtag.Tags
 	Key              string
 	Configurable     bool
 	ConfigurationKey string
-}
-
-func (f *Field) Tag(name string) (string, bool) {
-	if f.Tags == nil {
-		return "", false
-	}
-	tag, err := f.Tags.Get(name)
-	if err != nil {
-		return "", false
-	}
-	return tag.Name, true
-}
-
-func (f *Field) FullTag(name string) (string, bool) {
-	if f.Tags == nil {
-		return "", false
-	}
-	tag, err := f.Tags.Get(name)
-	if err != nil {
-		return "", false
-	}
-	return strings.Join(append([]string{tag.Name}, tag.Options...), ","), true
 }
 
 func (f *Field) Inject(s *Field) (err error) {
@@ -66,7 +41,7 @@ func (f *Field) Inject(s *Field) (err error) {
 }
 
 func (f *Field) IsLeaf() bool {
-	if _, isInjected := f.Tag(TagInject); isInjected {
+	if _, ok := f.Tags.Lookup(TagInject); ok {
 		return true
 	}
 
@@ -77,12 +52,4 @@ func (f *Field) IsLeaf() bool {
 	}
 
 	return f.Value.Type().Elem().Kind() != reflect.Struct
-}
-
-func (f *Field) IsAnonymous() bool {
-	if f.StructField == nil {
-		return true
-	}
-
-	return f.StructField.Anonymous
 }
