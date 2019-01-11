@@ -7,8 +7,8 @@ needed to configure and initialize an application's dependencies.
 ## Usage
 
 _zconfig_ primary feature is an extensible configuration repository. To use it,
-simply define a configuration struture and feed it to the `Configure()`
-method. You can use the `key`, `description`and `default` tags to define which
+simply define a configuration structure and feed it to the `Configure()`
+method. You can use the `key`, `description` and `default` tags to define which
 key to use.
 
 ```go
@@ -175,7 +175,7 @@ Note that the injection system isn't tied to the configuration one: you don't
 need your injection source or target to be part of a chain of `key`ed structs.
 
 Also, _zconfig_ will return an error if given a struct with a cycle in it, the
-same way the compiler will refuse compiling a type definition with cycles.
+same way the compiler will refuse to compile a type definition with cycles.
 
 ## How it works
 
@@ -243,7 +243,7 @@ set the values of the configuration struct.
 
 A _provider_ is a simple interface for retrieving the value associated with a
 key. Each provider listed by the repository is consulted until one of them
-returns a result. 
+returns a result.
 
 ```go
 type Provider interface {
@@ -288,7 +288,7 @@ the destination type of a field.
 The `Parse()` method does the actual job of translating a raw value into a
 parsed value that the destination field can be set to.
 
-The default repository has a certain number of parser registered. This list is
+The default repository has a certain number of parsers registered. This list is
 exported as `DefaultParsers` so custom repositories can use the same list or
 even extend it.
 
