@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## Unreleased
+### Changed
+- Modify the `Parser` and `Provider` signatures to allow retrieving any value,
+  not only strings
+
 ### Removed
 - Dependency to the `github.com/pkg/errors` package
 - Dependency to the `github.com/fatih/structtag` package

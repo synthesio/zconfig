@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -25,19 +26,21 @@ func (r *Repository) AddProviders(providers ...Provider) {
 }
 
 // Retrieve a key from the provider, by priority order.
-func (r *Repository) Retrieve(key string) (value, provider string, found bool, err error) {
+func (r *Repository) Retrieve(key string) (value interface{}, provider string, found bool, err error) {
 	for _, p := range r.providers {
 		value, found, err = p.Retrieve(key)
 		if err != nil {
-			return "", "", false, err
+			return nil, p.Name(), false, err
 		}
 		if found {
 			return value, p.Name(), true, nil
 		}
 	}
 
-	return "", "", false, nil
+	return nil, "", false, nil
 }
+
+var ErrNotParseable = errors.New("not parseable")
 
 // Register allow anyone to add a custom parser to the list.
 func (r *Repository) AddParsers(parsers ...Parser) {
@@ -48,21 +51,18 @@ func (r *Repository) AddParsers(parsers ...Parser) {
 
 // Parse the parameter depending on the kind of the field, returning an
 // appropriately typed reflect.Value.
-func (r *Repository) Parse(typ reflect.Type, parameter string) (val reflect.Value, err error) {
+func (r *Repository) Parse(raw, res interface{}) (err error) {
 	for _, p := range r.parsers {
-		if !p.CanParse(typ) {
+		err = p(raw, res)
+		if err == ErrNotParseable {
 			continue
 		}
-
-		val, err = p.Parse(typ, parameter)
 		if err != nil {
-			return val, fmt.Errorf("unable to parse %s: %s", typ, err)
+			return fmt.Errorf("unable to parse %T: %s", res, err)
 		}
-
-		return val, nil
+		return nil
 	}
-
-	return val, fmt.Errorf("no parser for type %s", typ)
+	return fmt.Errorf("no parser for type %T", res)
 }
 
 func (r *Repository) Hook(f *Field) (err error) {
@@ -83,15 +83,15 @@ func (r *Repository) Hook(f *Field) (err error) {
 		raw = def
 	}
 
-	res, err := r.Parse(f.Value.Type(), raw)
+	var val = f.Value
+	if val.Kind() != reflect.Ptr {
+		val = val.Addr()
+	}
+
+	err = r.Parse(raw, val.Interface())
 	if err != nil {
 		return fmt.Errorf("configuring field %s: parsing value for key %s: %s", f.Path, f.ConfigurationKey, err)
 	}
 
-	if !f.Value.CanSet() {
-		return fmt.Errorf("configuring field %s: can't set value", f.Path)
-	}
-
-	f.Value.Set(res)
 	return nil
 }

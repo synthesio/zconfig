@@ -236,8 +236,8 @@ func Initialize(field *Field) error {
 
 The first hook setup in the default processor, and the main feature of the
 library, is the configuration repository hook. The `Repository` is a struct
-holding a list of `Provider` and `Parser` interfaces used by the hook to
-set the values of the configuration struct.
+holding a list of `Provider` interfaces and `Parser` function used by the hook
+to set the values of the configuration struct.
 
 #### Provider
 
@@ -247,7 +247,7 @@ returns a result.
 
 ```go
 type Provider interface {
-	Retrieve(key string) (value string, found bool, err error)
+	Retrieve(key string) (value interface{}, found bool, err error)
 	Name() string
 	Priority() int
 }
@@ -272,25 +272,16 @@ at the program's environment.
 
 #### Parser
 
-A _parser_ is an interface for converting a raw `string` value to a
-`reflect.Value` used by the repository's hook.
+A _parser_ is a function for converting a raw value to another. The `dst`
+parameter is always a pointer to the expected value.
 
 ```go
-type Parser interface {
-	Parse(reflect.Type, string) (reflect.Value, error)
-	CanParse(reflect.Type) bool
-}
+type Parser func(raw interface{}, dst interface{}) error
 ```
 
-The `CanParse()` method allows the repository to find a suitable parser given
-the destination type of a field.
-
-The `Parse()` method does the actual job of translating a raw value into a
-parsed value that the destination field can be set to.
-
-The default repository has a certain number of parsers registered. This list is
-exported as `DefaultParsers` so custom repositories can use the same list or
-even extend it.
+The default repository has a `ParseString` registered that handle the
+convertion listed above from their matching string representation, obviously
+intended to work with the values from the `Args` and `Env` providers.
 
 ## Frequently Asked Questions
 
@@ -302,7 +293,7 @@ you want to do this:
 ```go
 var repository zconfig.Repository
 repository.AddProviders(zconfig.Env)
-repository.AddParsers(zconfig.DefaultParsers...)
+repository.AddParsers(zconfig.ParseString)
 
 var processor zconfig.Processor
 processor.AddHooks(repository.Hook, zconfig.Initialize)
@@ -344,9 +335,9 @@ type JSONProvider struct {
 	raw gjson.Result
 }
 
-func (p JSONProvider) Retrieve(key string) (raw string, found bool, err error) {
+func (p JSONProvider) Retrieve(key string) (raw interface{}, found bool, err error) {
 	field := p.raw.Get(key)
-	return raw.String(), field.Exists(), nil
+	return field.Value(), field.Exists(), nil
 }
 
 func (JSONProvider) Name() string {

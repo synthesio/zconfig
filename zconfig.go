@@ -1,9 +1,5 @@
 package zconfig
 
-import (
-	"reflect"
-)
-
 var (
 	defaultRepository Repository
 	defaultProcessor  Processor
@@ -13,7 +9,7 @@ var (
 
 func init() {
 	defaultRepository.AddProviders(Args, Env)
-	defaultRepository.AddParsers(DefaultParsers...)
+	defaultRepository.AddParsers(ParseString)
 	defaultProcessor.AddHooks(defaultRepository.Hook, Initialize)
 }
 
@@ -34,7 +30,7 @@ func AddHooks(hooks ...Hook) {
 // Provider is the interface implemented by all entity a configuration key can
 // be retrieved from.
 type Provider interface {
-	Retrieve(key string) (value string, found bool, err error)
+	Retrieve(key string) (value interface{}, found bool, err error)
 	Name() string
 	Priority() int
 }
@@ -44,12 +40,9 @@ func AddProviders(providers ...Provider) {
 	defaultRepository.AddProviders(providers...)
 }
 
-// Parser is the interface implemented by a struct that can convert a raw
-// string representation to a given type.
-type Parser interface {
-	Parse(reflect.Type, string) (reflect.Value, error)
-	CanParse(reflect.Type) bool
-}
+// Parser is the type of function that can convert a raw representation to a
+// given type.
+type Parser func(interface{}, interface{}) error
 
 // Add a parser to the default repository.
 func AddParsers(parsers ...Parser) {
