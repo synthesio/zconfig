@@ -76,6 +76,7 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 
 	if p == nil {
 		field.Path = "$"
+		field.Anonymous = true
 	} else {
 		field.Path = fmt.Sprintf("%s.%s", p.Path, s.Name)
 		field.Anonymous = s.Anonymous
