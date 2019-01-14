@@ -27,7 +27,7 @@ func TestWalk(t *testing.T) {
 		t.Fatalf("walking service: %s", err)
 	}
 
-	expected := &Field{Path: "$", Children: []*Field{
+	expected := &Field{Path: "$", Anonymous: true, Children: []*Field{
 		{Path: "$.Workers"},
 		{Path: "$.Dependency", Children: []*Field{
 			{Path: "$.Dependency.Foo"},
@@ -52,11 +52,15 @@ func testGraph(t *testing.T, actual, expected, parent *Field) {
 	}
 
 	if actual.Parent != parent {
-		t.Fatalf("invalud parent for path %s: wanted %p, got %p", actual.Path, parent, actual.Parent)
+		t.Fatalf("invalid parent for path %s: wanted %p, got %p", actual.Path, parent, actual.Parent)
 	}
 
 	if len(actual.Children) != len(expected.Children) {
 		t.Fatalf("invalid number of children for path %s: wanted %d, got %d", actual.Path, len(expected.Children), len(actual.Children))
+	}
+
+	if actual.Anonymous != expected.Anonymous {
+		t.Fatalf("invalid anonymous field for path %s: wanted %v, got %v", actual.Path, expected.Anonymous, actual.Anonymous)
 	}
 
 	for i := 0; i < len(actual.Children); i++ {
