@@ -2,161 +2,105 @@ package zconfig
 
 import (
 	"encoding"
-	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
-type ParserFunc struct {
-	Type reflect.Type
-	Func func(reflect.Type, string) (reflect.Value, error)
-}
-
-func (p ParserFunc) CanParse(typ reflect.Type) bool {
-	return typ.AssignableTo(p.Type) || reflect.PtrTo(typ).AssignableTo(p.Type)
-}
-
-func (p ParserFunc) Parse(typ reflect.Type, raw string) (val reflect.Value, err error) {
-	withValue := typ.AssignableTo(p.Type)
-	withPointer := reflect.PtrTo(typ).AssignableTo(p.Type)
-
-	if !withValue && !withPointer {
-		return val, fmt.Errorf("cannot parse %s", typ)
+func ParseString(raw, res interface{}) (err error) {
+	s, ok := raw.(string)
+	if !ok {
+		return ErrNotParseable
 	}
 
-	if withPointer {
-		typ = reflect.PtrTo(typ)
-	}
-
-	val, err = p.Func(typ, raw)
-	if err != nil {
-		return val, fmt.Errorf("unable to parse %s: %s", typ, err)
-	}
-
-	if withPointer {
-		val = val.Elem()
-	}
-
-	return val, nil
-}
-
-var DefaultParsers = []Parser{
-	ParserFunc{reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem(), parseTextUnmarshaler},
-	ParserFunc{reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem(), parseBinaryUnmarshaler},
-	ParserFunc{reflect.TypeOf([]string(nil)), parseStringSlice},
-	ParserFunc{reflect.TypeOf(string("")), parseString},
-	ParserFunc{reflect.TypeOf(bool(false)), parseBool},
-	ParserFunc{reflect.TypeOf(float32(0)), parseFloat},
-	ParserFunc{reflect.TypeOf(float64(0)), parseFloat},
-	ParserFunc{reflect.TypeOf(uint(0)), parseUint},
-	ParserFunc{reflect.TypeOf(uint8(0)), parseUint},
-	ParserFunc{reflect.TypeOf(uint16(0)), parseUint},
-	ParserFunc{reflect.TypeOf(uint32(0)), parseUint},
-	ParserFunc{reflect.TypeOf(uint64(0)), parseUint},
-	ParserFunc{reflect.TypeOf(int(0)), parseInt},
-	ParserFunc{reflect.TypeOf(int8(0)), parseInt},
-	ParserFunc{reflect.TypeOf(int16(0)), parseInt},
-	ParserFunc{reflect.TypeOf(int32(0)), parseInt},
-	ParserFunc{reflect.TypeOf(int64(0)), parseInt},
-	ParserFunc{reflect.TypeOf(time.Duration(0)), parseDuration},
-	ParserFunc{reflect.TypeOf(new(regexp.Regexp)), parseRegexp},
-}
-
-func parseString(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	return reflect.ValueOf(parameter), nil
-}
-
-func parseStringSlice(_ reflect.Type, parameter string) (val reflect.Value, err error) {
-	var out []string
-	for _, r := range strings.Split(parameter, ",") {
-		r = strings.TrimSpace(r)
-		if len(r) == 0 {
-			continue
+	switch res := res.(type) {
+	case encoding.TextUnmarshaler:
+		return res.UnmarshalText([]byte(s))
+	case encoding.BinaryUnmarshaler:
+		return res.UnmarshalBinary([]byte(s))
+	case *string:
+		*res = s
+		return nil
+	case *[]byte:
+		*res = []byte(s)
+		return nil
+	case *[]string:
+		for _, c := range strings.Split(s, ",") {
+			v := strings.TrimSpace(c)
+			if v == "" {
+				continue
+			}
+			*res = append(*res, v)
 		}
-		out = append(out, r)
-	}
-	return reflect.ValueOf(out), nil
-}
-
-func parseTextUnmarshaler(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	var i interface{}
-	if typ.Kind() == reflect.Ptr {
-		i = reflect.New(typ.Elem()).Interface()
-	} else {
-		i = reflect.New(typ).Elem().Interface()
-	}
-	err = i.(encoding.TextUnmarshaler).UnmarshalText([]byte(parameter))
-	return reflect.ValueOf(i), err
-}
-
-func parseBinaryUnmarshaler(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	var i interface{}
-	if typ.Kind() == reflect.Ptr {
-		i = reflect.New(typ.Elem()).Interface()
-	} else {
-		i = reflect.New(typ).Elem().Interface()
-	}
-	err = i.(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(parameter))
-	return reflect.ValueOf(i), err
-}
-
-func parseUint(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	v, err := strconv.ParseUint(parameter, 10, typ.Bits())
-	if err != nil {
-		return val, err
-	}
-	return reflect.ValueOf(v).Convert(typ), nil
-}
-
-func parseInt(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	v, err := strconv.ParseInt(parameter, 10, typ.Bits())
-	if err != nil {
-		return val, err
-	}
-	return reflect.ValueOf(v).Convert(typ), nil
-}
-
-func parseFloat(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	v, err := strconv.ParseFloat(parameter, typ.Bits())
-	if err != nil {
-		return val, err
-	}
-	return reflect.ValueOf(v).Convert(typ), nil
-}
-
-func parseBool(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	if parameter == "" {
-		return reflect.ValueOf(true), nil
-	}
-
-	v, err := strconv.ParseBool(parameter)
-	if err != nil {
-		return val, err
-	}
-	return reflect.ValueOf(v), nil
-}
-
-func parseDuration(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	duration, err := time.ParseDuration(parameter)
-	if err != nil {
-		return val, err
-	}
-
-	return reflect.ValueOf(duration).Convert(typ), nil
-}
-
-func parseRegexp(typ reflect.Type, parameter string) (val reflect.Value, err error) {
-	if parameter == "" {
-		return val, nil
+		return nil
+	case *bool:
+		*res, err = strconv.ParseBool(s)
+		return err
+	case *int:
+		v, err := strconv.ParseInt(s, 10, strconv.IntSize)
+		*res = int(v)
+		return err
+	case *int8:
+		v, err := strconv.ParseInt(s, 10, 8)
+		*res = int8(v)
+		return err
+	case *int16:
+		v, err := strconv.ParseInt(s, 10, 16)
+		*res = int16(v)
+		return err
+	case *int32:
+		v, err := strconv.ParseInt(s, 10, 32)
+		*res = int32(v)
+		return err
+	case *int64:
+		v, err := strconv.ParseInt(s, 10, 64)
+		*res = int64(v)
+		return err
+	case *uint:
+		v, err := strconv.ParseUint(s, 10, strconv.IntSize)
+		*res = uint(v)
+		return err
+	case *uint8:
+		v, err := strconv.ParseUint(s, 10, 8)
+		*res = uint8(v)
+		return err
+	case *uint16:
+		v, err := strconv.ParseUint(s, 10, 16)
+		*res = uint16(v)
+		return err
+	case *uint32:
+		v, err := strconv.ParseUint(s, 10, 32)
+		*res = uint32(v)
+		return err
+	case *uint64:
+		v, err := strconv.ParseUint(s, 10, 64)
+		*res = uint64(v)
+		return err
+	case *float32:
+		v, err := strconv.ParseFloat(s, 32)
+		*res = float32(v)
+		return err
+	case *float64:
+		v, err := strconv.ParseFloat(s, 64)
+		*res = float64(v)
+		return err
+	case *regexp.Regexp:
+		v, err := regexp.Compile(s)
+		if err != nil {
+			return err
+		}
+		*res = *v
+		return nil
+	case *time.Duration:
+		v, err := time.ParseDuration(s)
+		if err != nil {
+			return err
+		}
+		*res = v
+	default:
+		return ErrNotParseable
 	}
 
-	regex, err := regexp.Compile(parameter)
-	if err != nil {
-		return val, err
-	}
-
-	return reflect.ValueOf(regex).Convert(typ), nil
+	return nil
 }

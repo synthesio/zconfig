@@ -6,7 +6,7 @@ import (
 )
 
 type S struct {
-	Foo   string    `key:"foo"`
+	Foo   *string   `key:"foo"`
 	T     time.Time `key:"t"`
 	E     E         `key:"e"`
 	F     F         `key:"f"`

@@ -4,7 +4,7 @@ type TestProvider struct {
 	values map[string]string
 }
 
-func (p TestProvider) Retrieve(key string) (raw string, found bool, err error) {
+func (p TestProvider) Retrieve(key string) (raw interface{}, found bool, err error) {
 	raw, found = p.values[key]
 	return raw, found, nil
 }

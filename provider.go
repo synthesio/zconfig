@@ -48,7 +48,7 @@ func NewArgsProvider() (p *ArgsProvider) {
 // Retrieve will return the value from the parsed command-line arguments.
 // Arguments are parsed the first time the method is called. Arguments are
 // expected to be in the form `--key=value` exclusively (for now).
-func (p *ArgsProvider) Retrieve(key string) (value string, found bool, err error) {
+func (p *ArgsProvider) Retrieve(key string) (value interface{}, found bool, err error) {
 	value, found = p.Args[key]
 	return value, found, nil
 }
@@ -92,7 +92,7 @@ func NewEnvProvider() (p *EnvProvider) {
 
 // Retrieve will return the value from the parsed environment variables.
 // Variables are parsed the first time the method is called.
-func (p *EnvProvider) Retrieve(key string) (value string, found bool, err error) {
+func (p *EnvProvider) Retrieve(key string) (value interface{}, found bool, err error) {
 	value, found = p.Env[p.FormatKey(key)]
 	return value, found, nil
 }
