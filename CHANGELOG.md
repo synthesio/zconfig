@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## 1.1.0 - 2019-06-25
+### Added
+- Full module compliance
+
 ### Changed
 - Modify the `Parser` and `Provider` signatures to allow retrieving any value,
   not only strings
