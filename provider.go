@@ -10,8 +10,7 @@ type ArgsProvider struct {
 	Args map[string]string
 }
 
-// Init fetch all keys available in the command-line and initialize the provider
-// internal storage.
+// NewArgsProvider lookup keys based on the command-line string.
 func NewArgsProvider() (p *ArgsProvider) {
 	p = new(ArgsProvider)
 
@@ -64,36 +63,18 @@ func (ArgsProvider) Priority() int {
 }
 
 // A Provider that implements the repository.Provider interface.
-type EnvProvider struct {
-	Env map[string]string
-}
+type EnvProvider struct{}
 
-// Init fetch all keys available in the command-line and initialize the provider
-// internal storage.
-func NewEnvProvider() (p *EnvProvider) {
-	p = new(EnvProvider)
-
-	// Initialize the flags map.
-	environ := os.Environ()
-	p.Env = make(map[string]string, len(environ))
-
-	// For each value, split around the first equal sign and set the
-	// environment value.
-	for _, value := range environ {
-		parts := strings.SplitN(value, "=", 2)
-		parts = append(parts, "") // Avoid out-of-bound errors.
-
-		key := p.FormatKey(parts[0])
-		p.Env[key] = parts[1]
-	}
-
+// NewEnvProvider returns a provider that will lookup keys in the environment
+// variables.
+func NewEnvProvider() (p EnvProvider) {
 	return p
 }
 
 // Retrieve will return the value from the parsed environment variables.
 // Variables are parsed the first time the method is called.
-func (p *EnvProvider) Retrieve(key string) (value interface{}, found bool, err error) {
-	value, found = p.Env[p.FormatKey(key)]
+func (p EnvProvider) Retrieve(key string) (value interface{}, found bool, err error) {
+	value, found = os.LookupEnv(p.FormatKey(key))
 	return value, found, nil
 }
 
