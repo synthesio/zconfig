@@ -11,6 +11,7 @@ const (
 	TagKey         = "key"
 	TagDefault     = "default"
 	TagDescription = "description"
+	TagExample     = "example"
 )
 
 type Field struct {

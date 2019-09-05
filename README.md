@@ -8,12 +8,13 @@ needed to configure and initialize an application's dependencies.
 
 _zconfig_ primary feature is an extensible configuration repository. To use it,
 simply define a configuration structure and feed it to the `Configure()`
-method. You can use the `key`, `description` and `default` tags to define which
+method. You can use the `key`, `description`, `default` and `example` tags to define which
 key to use.
 
 ```go
 type Configuration struct {
 	Addr string `key:"addr" description:"address the server should bind to" default:":80"`
+	Name string `key:"name" description:"name displayed to the client" example:"zconfig"`
 }
 
 func main() {
@@ -32,12 +33,13 @@ func main() {
 
 Once compiled, the special flag `help` can be passed to the binary to display a
 list of the available configuration keys, in their cli and env form, as well as
-their description and default values.
+their description and default/example values.
 
 ```shell
 $ ./a.out --help
 Keys:
 addr	ADDR	address the server should bind to	(:80)
+name	NAME	name displayed to the client	example: zconfig
 ```
 
 Configurations can be nested into structs to improve usability, and the keys of
@@ -72,16 +74,15 @@ server.addr	SERVER_ADDR	address the server should bind to	(:80)
 
 The following types are handled by default by the library:
 
-* `encoding.TextUnmarshaller`
-* `encoding.BinaryUnmarshaller`
-* `(u)?int(32|64)?`
-* `float(32|64)`
-* `string`
-* `[]string`
-* `bool`
-* `time.Duration`
-* `regexp.Regexp`
-
+- `encoding.TextUnmarshaller`
+- `encoding.BinaryUnmarshaller`
+- `(u)?int(32|64)?`
+- `float(32|64)`
+- `string`
+- `[]string`
+- `bool`
+- `time.Duration`
+- `regexp.Regexp`
 
 ### Initialization
 
@@ -188,7 +189,7 @@ The `Field` struct is a graph representation of a single field of your
 configuration struct, with pointers for parent and children. The list of fields
 handled by the processor is ordered by deepest dependency first, meaning that
 for any given hook, all children of a given field are processed by the hook
-before the field itself.  For the case of injection, the targets aren't
+before the field itself. For the case of injection, the targets aren't
 included in this list, but the sources are processed before the target's
 branch.
 

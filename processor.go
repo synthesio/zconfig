@@ -319,6 +319,8 @@ func usage(fields []*Field) {
 		desc, _ := field.Tags.Lookup(TagDescription)
 		if ok {
 			fmt.Fprintf(w, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
+		} else if ex, ok := field.Tags.Lookup(TagExample); ok {
+			fmt.Fprintf(w, "%s\t%s\t%s\texample: %s\n", key, Env.FormatKey(key), desc, ex)
 		} else {
 			fmt.Fprintf(w, "%s\t%s\t%s\t\n", key, Env.FormatKey(key), desc)
 		}
