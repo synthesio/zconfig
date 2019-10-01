@@ -1,6 +1,7 @@
 package zconfig
 
 type TestProvider struct {
+	name   string
 	values map[string]string
 }
 
@@ -13,6 +14,6 @@ func (TestProvider) Priority() int {
 	return 1
 }
 
-func (TestProvider) Name() string {
-	return "test"
+func (p TestProvider) Name() string {
+	return p.name
 }

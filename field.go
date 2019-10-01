@@ -23,6 +23,7 @@ type Field struct {
 	Children []*Field
 
 	Key              string
+	Provider         string
 	Configurable     bool
 	ConfigurationKey string
 }

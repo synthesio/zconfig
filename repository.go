@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+const ProviderDefault = "default"
+
 // A Repository is list of configuration providers and hooks.
 type Repository struct {
 	lock      sync.Mutex
@@ -70,7 +72,7 @@ func (r *Repository) Hook(f *Field) (err error) {
 		return nil
 	}
 
-	raw, _, found, err := r.Retrieve(f.ConfigurationKey)
+	raw, provider, found, err := r.Retrieve(f.ConfigurationKey)
 	if err != nil {
 		return fmt.Errorf("configuring field %s: retrieving key %s: %s", f.Path, f.ConfigurationKey, err)
 	}
@@ -81,6 +83,7 @@ func (r *Repository) Hook(f *Field) (err error) {
 			return fmt.Errorf("configuring field %s: missing key %s", f.Path, f.ConfigurationKey)
 		}
 		raw = def
+		provider = ProviderDefault
 	}
 
 	var val = f.Value
@@ -92,6 +95,8 @@ func (r *Repository) Hook(f *Field) (err error) {
 	if err != nil {
 		return fmt.Errorf("configuring field %s: parsing value for key %s: %s", f.Path, f.ConfigurationKey, err)
 	}
+
+	f.Provider = provider
 
 	return nil
 }
