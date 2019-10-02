@@ -7,6 +7,8 @@ import (
 
 type S struct {
 	Foo   *string   `key:"foo"`
+	Baz   string    `key:"baz"`
+	Quz   string    `key:"quz" default:"some"`
 	T     time.Time `key:"t"`
 	E     E         `key:"e"`
 	F     F         `key:"f"`
@@ -46,8 +48,33 @@ type M struct {
 	}
 }
 
+type Tester struct {
+	t *testing.T
+}
+
+func (tester *Tester) Hook(field *Field) error {
+	expectedProviders := map[string]string{
+		"foo": "test",
+		"baz": "test2",
+		"quz": ProviderDefault,
+	}
+
+	expectedProvider, found := expectedProviders[field.Key]
+	if !found {
+		return nil
+	}
+
+	if field.Provider != expectedProvider {
+		tester.t.Fatalf("unexpected provider for key %q, got %q, expected %q", field.Key, field.Provider, expectedProvider)
+	}
+
+	return nil
+}
+
 func TestConfigure(t *testing.T) {
-	var p = TestProvider{map[string]string{
+	tester := Tester{t}
+
+	var p = TestProvider{"test", map[string]string{
 		"foo":     "a",
 		"t":       "2018-12-18T11:29:00+02:00",
 		"e.r":     "1",
@@ -58,7 +85,13 @@ func TestConfigure(t *testing.T) {
 		"a.b.c.d": "6",
 		"m.foo":   "7",
 	}}
-	AddProviders(p)
+	var p2 = TestProvider{
+		"test2",
+		map[string]string{
+			"baz": "baz",
+		}}
+	AddHooks(tester.Hook)
+	AddProviders(p, p2)
 	var s S
 	err := Configure(&s)
 	if err != nil {
