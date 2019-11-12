@@ -16,6 +16,8 @@ import (
 type Processor struct {
 	lock  sync.Mutex
 	hooks []Hook
+
+	Usage func([]*Field)
 }
 
 func NewProcessor(hooks ...Hook) *Processor {
@@ -48,6 +50,11 @@ func (p *Processor) Process(s interface{}) error {
 	mark(root, "")
 
 	if _, ok, _ := Args.Retrieve("help"); ok {
+		usage := p.Usage
+		if p.Usage == nil {
+			usage = DefaultUsage
+		}
+
 		usage(fields)
 		os.Exit(0)
 	}
@@ -298,7 +305,7 @@ func mark(f *Field, key string) bool {
 	return true
 }
 
-func usage(fields []*Field) {
+func DefaultUsage(fields []*Field) {
 	var keys []string
 	var options = make(map[string]*Field)
 	for _, f := range fields {

@@ -197,6 +197,13 @@ hooks: the first is the one that do the actual configuration of the fields, and
 the second do the initialization of the field. The global `Configure()` and
 `AddHooks()` methods are shortcuts to the methods of this default processor.
 
+### Help Messages
+
+Help message is handled by the stock processor. After analyzing the given
+struct, it looks for a `--help` flag in the stock `ArgsProvider`. If found, it
+call the `zconfig.Processor.Usage` field (or the `zconfig.DefaultUsage` method
+if nil) to display help.
+
 ### Hook
 
 The `Hook` is a type for a function that takes a single pointer to a `Field` as
