@@ -32,7 +32,8 @@ func main() {
 
 Once compiled, the special flag `help` can be passed to the binary to display a
 list of the available configuration keys, in their cli and env form, as well as
-their description and default values.
+their description and default values. (The message can be configured, see
+`zconfig.Processor.Usage`).
 
 ```shell
 $ ./a.out --help
