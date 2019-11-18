@@ -1,21 +1,21 @@
 package zconfig
 
 var (
-	defaultRepository Repository
-	defaultProcessor  Processor
+	DefaultRepository Repository
+	DefaultProcessor  Processor
 	Args              = NewArgsProvider()
 	Env               = NewEnvProvider()
 )
 
 func init() {
-	defaultRepository.AddProviders(Args, Env)
-	defaultRepository.AddParsers(ParseString)
-	defaultProcessor.AddHooks(defaultRepository.Hook, Initialize)
+	DefaultRepository.AddProviders(Args, Env)
+	DefaultRepository.AddParsers(ParseString)
+	DefaultProcessor.AddHooks(DefaultRepository.Hook, Initialize)
 }
 
 // Configure a service using the default processor.
 func Configure(s interface{}) error {
-	return defaultProcessor.Process(s)
+	return DefaultProcessor.Process(s)
 }
 
 // A Hook can be used to act upon every field visited by the repository when
@@ -24,7 +24,7 @@ type Hook func(field *Field) error
 
 // Add a hook to the default repository.
 func AddHooks(hooks ...Hook) {
-	defaultProcessor.AddHooks(hooks...)
+	DefaultProcessor.AddHooks(hooks...)
 }
 
 // Provider is the interface implemented by all entity a configuration key can
@@ -37,7 +37,7 @@ type Provider interface {
 
 // Add a provider to the default repository.
 func AddProviders(providers ...Provider) {
-	defaultRepository.AddProviders(providers...)
+	DefaultRepository.AddProviders(providers...)
 }
 
 // Parser is the type of function that can convert a raw representation to a
@@ -46,5 +46,5 @@ type Parser func(interface{}, interface{}) error
 
 // Add a parser to the default repository.
 func AddParsers(parsers ...Parser) {
-	defaultRepository.AddParsers(parsers...)
+	DefaultRepository.AddParsers(parsers...)
 }

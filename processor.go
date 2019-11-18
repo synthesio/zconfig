@@ -17,6 +17,8 @@ type Processor struct {
 	lock  sync.Mutex
 	hooks []Hook
 
+	// Usage message to be displayed on error or when help is requested.
+	// DefaultUsage will be used if left nil.
 	Usage func([]*Field)
 }
 
