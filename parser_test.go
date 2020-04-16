@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-func p(i interface{}) interface{} {
-	return reflect.ValueOf(i).Addr().Interface()
-}
-
 func TestParseString(t *testing.T) {
 	for _, c := range []struct {
 		raw interface{}
@@ -31,6 +27,18 @@ func TestParseString(t *testing.T) {
 		{raw: "foo  ", res: []string{"foo"}, err: false},
 		{raw: "foo , bar ", res: []string{"foo", "bar"}, err: false},
 		{raw: "  baz,foo , bar ", res: []string{"baz", "foo", "bar"}, err: false},
+
+		// Int slices
+		{raw: "10", res: []int{10}, err: false},
+		{raw: "10  ", res: []int{10}, err: false},
+		{raw: "10 , 20 ", res: []int{10, 20}, err: false},
+		{raw: "  10,20 , 30 ", res: []int{10, 20, 30}, err: false},
+
+		// Int64 slices
+		{raw: "10", res: []int64{10}, err: false},
+		{raw: "10  ", res: []int64{10}, err: false},
+		{raw: "10 , 20 ", res: []int64{10, 20}, err: false},
+		{raw: "  10,20 , 30 ", res: []int64{10, 20, 30}, err: false},
 
 		// Numeric types
 		{raw: "1", res: int(1), err: false},
