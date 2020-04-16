@@ -34,6 +34,30 @@ func ParseString(raw, res interface{}) (err error) {
 			*res = append(*res, v)
 		}
 		return nil
+	case *[]int:
+		for _, c := range strings.Split(s, ",") {
+			raw := strings.TrimSpace(c)
+			if raw == "" {
+				continue
+			}
+			v, err := strconv.Atoi(raw)
+			if err != nil {
+				return err
+			}
+			*res = append(*res, v)
+		}
+	case *[]int64:
+		for _, c := range strings.Split(s, ",") {
+			raw := strings.TrimSpace(c)
+			if raw == "" {
+				continue
+			}
+			v, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				return err
+			}
+			*res = append(*res, v)
+		}
 	case *bool:
 		*res, err = strconv.ParseBool(s)
 		return err
