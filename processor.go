@@ -319,18 +319,24 @@ func DefaultUsage(fields []*Field) {
 	}
 	sort.Strings(keys)
 
-	fmt.Printf("\nKeys:\n")
-	w := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
+	required := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
+	optional := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
+
 	for _, key := range keys {
 		field := options[key]
 
 		def, ok := field.Tags.Lookup(TagDefault)
 		desc, _ := field.Tags.Lookup(TagDescription)
 		if ok {
-			fmt.Fprintf(w, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
+			fmt.Fprintf(optional, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
 		} else {
-			fmt.Fprintf(w, "%s\t%s\t%s\t\n", key, Env.FormatKey(key), desc)
+			fmt.Fprintf(required, "%s\t%s\t%s\n", key, Env.FormatKey(key), desc)
 		}
 	}
-	_ = w.Flush()
+
+	fmt.Printf("\nRequired parameters:\n")
+	_ = required.Flush()
+
+	fmt.Printf("\nOptional parameters:\n")
+	_ = optional.Flush()
 }
