@@ -114,10 +114,30 @@ func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err e
 		return field, nil
 	}
 
+outer:
 	for i := 0; i < v.Type().NumField(); i++ {
 		structField := v.Type().Field(i)
 		if !unicode.IsUpper([]rune(structField.Name)[0]) {
 			continue
+		}
+
+		// Look for the field's own type in it's ancestry. If we find one,
+		// consider this field as a leaf because it would otherwise end-up in
+		// an infinite loop. See gorm.io/gorm.DB (in v1.22.4) for an example.
+		// Fixes #46.
+		fieldType := structField.Type
+		for fieldType.Kind() == reflect.Ptr {
+			fieldType = fieldType.Elem()
+		}
+		for ancestor := field; ancestor != nil; ancestor = ancestor.Parent {
+			ancestorType := ancestor.Value.Type()
+			for ancestorType.Kind() == reflect.Ptr {
+				ancestorType = ancestorType.Elem()
+			}
+
+			if ancestorType == fieldType {
+				continue outer
+			}
 		}
 
 		child, err := walk(v.Field(i), structField, field)

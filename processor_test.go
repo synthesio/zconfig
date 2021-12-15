@@ -12,6 +12,7 @@ type Service struct {
 	Workers        int              `key:"workers"`
 	Dependency     SimpleDependency `key:"dependency" inject-as:"dependency"`
 	Injected       SimpleDependency `inject:"dependency"`
+	Recursive      *RecursiveDependency
 	notExported    SimpleDependency
 	notExportedPtr *SimpleDependency
 }
@@ -20,9 +21,28 @@ type SimpleDependency struct {
 	Foo int `key:"foo"`
 }
 
+type RecursiveDependency struct {
+	Service
+}
+
 func TestWalk(t *testing.T) {
 	var v = reflect.ValueOf(new(Service))
-	root, err := walk(v, reflect.StructField{}, nil)
+
+	// The check itself is done in non-blocking fashion so we can fail in
+	// case of dependency loop, which can happen when embedding recursive
+	// pointer types.
+	var root *Field
+	var err error
+	var done = make(chan struct{})
+	go func() {
+		root, err = walk(v, reflect.StructField{}, nil)
+		close(done)
+	}()
+	select {
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("walking service: timeout")
+	case <-done:
+	}
 	if err != nil {
 		t.Fatalf("walking service: %s", err)
 	}
@@ -33,6 +53,7 @@ func TestWalk(t *testing.T) {
 			{Path: "$.Dependency.Foo"},
 		}},
 		{Path: "$.Injected"},
+		{Path: "$.Recursive"},
 	}}
 
 	displayGraph(t, root, 0)
@@ -87,6 +108,7 @@ func TestResolve(t *testing.T) {
 		"$.Workers":        {},
 		"$.Dependency":     {},
 		"$.Dependency.Foo": {},
+		"$.Recursive":      {},
 	}
 
 	for _, field := range fields {
@@ -205,6 +227,7 @@ func TestProcessorHooks(t *testing.T) {
 			"$.Workers":        false,
 			"$.Dependency":     false,
 			"$.Dependency.Foo": false,
+			"$.Recursive":      false,
 		}
 
 		testHook := func(field *Field) error {
