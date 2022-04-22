@@ -1,5 +1,9 @@
 package zconfig
 
+import (
+	"context"
+)
+
 var (
 	DefaultRepository Repository
 	DefaultProcessor  Processor
@@ -11,6 +15,7 @@ func init() {
 	DefaultRepository.AddProviders(Args, Env)
 	DefaultRepository.AddParsers(ParseString)
 	DefaultProcessor.AddHooks(DefaultRepository.Hook, Initialize)
+	DefaultProcessor.AddHooksEx(InitializeEx)
 }
 
 // Configure a service using the default processor.
@@ -22,9 +27,15 @@ func Configure(s interface{}) error {
 // configuring a service.
 type Hook func(field *Field) error
 
+type HookEx func(context.Context, *Field) error
+
 // Add a hook to the default repository.
 func AddHooks(hooks ...Hook) {
 	DefaultProcessor.AddHooks(hooks...)
+}
+
+func AddHooksEx(hooksEx ...HookEx) {
+	DefaultProcessor.AddHooksEx(hooksEx...)
 }
 
 // Provider is the interface implemented by all entity a configuration key can

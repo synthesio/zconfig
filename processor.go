@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,8 +15,9 @@ import (
 // A Processor handle the service processing and execute hooks on the resulting
 // fields.
 type Processor struct {
-	lock  sync.Mutex
-	hooks []Hook
+	lock    sync.Mutex
+	hooks   []Hook
+	hooksEx []HookEx
 
 	// Usage message to be displayed on error or when help is requested.
 	// DefaultUsage will be used if left nil.
@@ -28,7 +30,26 @@ func NewProcessor(hooks ...Hook) *Processor {
 	}
 }
 
+func (p *Processor) getHooks(ctx context.Context) []Hook {
+	ret := make([]Hook, 0, len(p.hooks)+len(p.hooksEx))
+	for i := range p.hooksEx {
+		ret = append(ret, func(field *Field) error {
+			return p.hooksEx[i](ctx, field)
+		})
+	}
+	ret = append(ret, p.hooks...)
+	return ret
+}
+
 func (p *Processor) Process(s interface{}) error {
+	return p.process(func() []Hook { return p.hooks }, s)
+}
+
+func (p *Processor) ProcessEx(ctx context.Context, s interface{}) error {
+	return p.process(func() []Hook { return p.getHooks(ctx) }, s)
+}
+
+func (p *Processor) process(getHooks func() []Hook, s interface{}) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr {
@@ -61,7 +82,7 @@ func (p *Processor) Process(s interface{}) error {
 		os.Exit(0)
 	}
 
-	for _, hook := range p.hooks {
+	for _, hook := range getHooks() {
 		for _, field := range fields {
 			err := hook(field)
 			if err != nil {
@@ -75,6 +96,10 @@ func (p *Processor) Process(s interface{}) error {
 
 func (p *Processor) AddHooks(hooks ...Hook) {
 	p.hooks = append(p.hooks, hooks...)
+}
+
+func (p *Processor) AddHooksEx(hooks ...HookEx) {
+	p.hooksEx = append(p.hooksEx, hooks...)
 }
 
 func walk(v reflect.Value, s reflect.StructField, p *Field) (field *Field, err error) {
