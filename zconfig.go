@@ -15,27 +15,20 @@ func init() {
 	DefaultRepository.AddProviders(Args, Env)
 	DefaultRepository.AddParsers(ParseString)
 	DefaultProcessor.AddHooks(DefaultRepository.Hook, Initialize)
-	DefaultProcessor.AddHooksEx(InitializeEx)
 }
 
 // Configure a service using the default processor.
-func Configure(s interface{}) error {
-	return DefaultProcessor.Process(s)
+func Configure(ctx context.Context, s interface{}) error {
+	return DefaultProcessor.Process(ctx, s)
 }
 
 // A Hook can be used to act upon every field visited by the repository when
 // configuring a service.
-type Hook func(field *Field) error
-
-type HookEx func(context.Context, *Field) error
+type Hook func(ctx context.Context, field *Field) error
 
 // Add a hook to the default repository.
 func AddHooks(hooks ...Hook) {
 	DefaultProcessor.AddHooks(hooks...)
-}
-
-func AddHooksEx(hooksEx ...HookEx) {
-	DefaultProcessor.AddHooksEx(hooksEx...)
 }
 
 // Provider is the interface implemented by all entity a configuration key can

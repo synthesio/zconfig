@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -52,7 +53,7 @@ type Tester struct {
 	t *testing.T
 }
 
-func (tester *Tester) Hook(field *Field) error {
+func (tester *Tester) Hook(ctx context.Context, field *Field) error {
 	expectedProviders := map[string]string{
 		"foo": "test",
 		"baz": "test2",
@@ -93,7 +94,7 @@ func TestConfigure(t *testing.T) {
 	AddHooks(tester.Hook)
 	AddProviders(p, p2)
 	var s S
-	err := Configure(&s)
+	err := Configure(context.Background(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
