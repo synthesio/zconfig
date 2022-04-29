@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -67,7 +68,7 @@ func (r *Repository) Parse(raw, res interface{}) (err error) {
 	return fmt.Errorf("no parser for type %T", res)
 }
 
-func (r *Repository) Hook(f *Field) (err error) {
+func (r *Repository) Hook(ctx context.Context, f *Field) (err error) {
 	if !f.Configurable {
 		return nil
 	}

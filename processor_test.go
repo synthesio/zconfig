@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -206,12 +207,12 @@ func TestProcessorHooks(t *testing.T) {
 	t.Run("execution", func(t *testing.T) {
 		executed := false
 
-		testHook := func(field *Field) error {
+		testHook := func(ctx context.Context, field *Field) error {
 			executed = true
 			return nil
 		}
 
-		err := NewProcessor(testHook).Process(new(Service))
+		err := NewProcessor(testHook).Process(context.Background(), new(Service))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -230,7 +231,7 @@ func TestProcessorHooks(t *testing.T) {
 			"$.Recursive":      false,
 		}
 
-		testHook := func(field *Field) error {
+		testHook := func(ctx context.Context, field *Field) error {
 			visited, ok := fields[field.Path]
 			if !ok {
 				t.Fatalf("unexpected field: %s", field.Path)
@@ -244,18 +245,18 @@ func TestProcessorHooks(t *testing.T) {
 			return nil
 		}
 
-		err := NewProcessor(testHook).Process(new(Service))
+		err := NewProcessor(testHook).Process(context.Background(), new(Service))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("error", func(t *testing.T) {
-		testHook := func(field *Field) error {
+		testHook := func(ctx context.Context, field *Field) error {
 			return errors.New("an error")
 		}
 
-		err := NewProcessor(testHook).Process(new(Service))
+		err := NewProcessor(testHook).Process(context.Background(), new(Service))
 		if err == nil {
 			t.Fatalf("expected an error, got nil")
 		}

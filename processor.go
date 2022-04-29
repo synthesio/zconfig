@@ -1,6 +1,7 @@
 package zconfig
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -28,7 +29,7 @@ func NewProcessor(hooks ...Hook) *Processor {
 	}
 }
 
-func (p *Processor) Process(s interface{}) error {
+func (p *Processor) Process(ctx context.Context, s interface{}) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr {
@@ -63,7 +64,7 @@ func (p *Processor) Process(s interface{}) error {
 
 	for _, hook := range p.hooks {
 		for _, field := range fields {
-			err := hook(field)
+			err := hook(ctx, field)
 			if err != nil {
 				return fmt.Errorf("executing hook on field %s: %s", field.Path, err)
 			}

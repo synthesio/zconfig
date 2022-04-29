@@ -1,5 +1,9 @@
 package zconfig
 
+import (
+	"context"
+)
+
 var (
 	DefaultRepository Repository
 	DefaultProcessor  Processor
@@ -14,13 +18,13 @@ func init() {
 }
 
 // Configure a service using the default processor.
-func Configure(s interface{}) error {
-	return DefaultProcessor.Process(s)
+func Configure(ctx context.Context, s interface{}) error {
+	return DefaultProcessor.Process(ctx, s)
 }
 
 // A Hook can be used to act upon every field visited by the repository when
 // configuring a service.
-type Hook func(field *Field) error
+type Hook func(ctx context.Context, field *Field) error
 
 // Add a hook to the default repository.
 func AddHooks(hooks ...Hook) {
