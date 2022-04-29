@@ -18,7 +18,7 @@ type Configuration struct {
 
 func main() {
 	var c Configuration
-	err := zconfig.Configure(&c)
+	err := zconfig.Configure(context.Background(), &c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -53,7 +53,7 @@ type Configuration struct {
 
 func main() {
 	var c Configuration
-	err := zconfig.Configure(&c)
+	err := zconfig.Configure(context.Background(), &c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -108,7 +108,7 @@ type Client struct {
 
 }
 
-func (c *Client) Init() (err error) {
+func (c *Client) Init(ctx context.Context) (err error) {
 	c.Client = redis.NewClient(&redis.Options{
 		Network:     "tcp",
 		Addr:        c.Address,
@@ -129,7 +129,10 @@ about initializing it, liberating your service from pesky initialization code.
 package main
 
 import (
+	"context"
+
 	"zredis"
+
 	"github.com/synthesio/zconfig"
 )
 
@@ -139,7 +142,7 @@ type Service struct {
 
 func main() {
 	var s Service
-	err := zconfig.Configure(&s)
+	err := zconfig.Configure(context.Background(), &s)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -207,31 +210,31 @@ if nil) to display help.
 
 ### Hook
 
-The `Hook` is a type for a function that takes a single pointer to a `Field` as
-parameter, and returns an error if need be.
+The `Hook` is a type for a function that takes a context and a single pointer to a `Field` as
+parameters, and returns an error if need be.
 
 ```go
-type Hook func(field *Field) error
+type Hook func(ctx context.Context, field *Field) error
 ```
 
 One good example of hook is the one used for initializing the fields:
 
 ```go
 type Initializable interface {
-	Init() error
+	Init(context.Context) error
 }
 
 // Used for type comparison.
 var typeInitializable = reflect.TypeOf((*Initializable)(nil)).Elem()
 
-func Initialize(field *Field) error {
+func Initialize(ctx context.Context, field *Field) error {
 	// Not initializable, nothing to do.
 	if !field.Value.Type().Implements(typeInitializable) {
 		return nil
 	}
 
 	// Initialize the element itself via the interface.
-	err := field.Value.Interface().(Initializable).Init()
+	err := field.Value.Interface().(Initializable).Init(ctx)
 	if err != nil {
 		return errors.Wrap(err, "initializing field")
 	}
