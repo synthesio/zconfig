@@ -42,12 +42,12 @@ func (p *Processor) Process(ctx context.Context, s interface{}) error {
 
 	root, err := walk(v, reflect.StructField{}, nil)
 	if err != nil {
-		return fmt.Errorf("walking struct: %s", err)
+		return fmt.Errorf("walking struct: %w", err)
 	}
 
 	fields, err := resolve(root)
 	if err != nil {
-		return fmt.Errorf("resolving struct: %s", err)
+		return fmt.Errorf("resolving struct: %w", err)
 	}
 
 	mark(root, "")
@@ -66,7 +66,7 @@ func (p *Processor) Process(ctx context.Context, s interface{}) error {
 		for _, field := range fields {
 			err := hook(ctx, field)
 			if err != nil {
-				return fmt.Errorf("executing hook on field %s: %s", field.Path, err)
+				return fmt.Errorf("executing hook on field %s: %w", field.Path, err)
 			}
 		}
 	}
@@ -215,7 +215,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 
 		err := target.Inject(source)
 		if err != nil {
-			return nil, fmt.Errorf("injecting field %s into %s: %s", source.Path, target.Path, err)
+			return nil, fmt.Errorf("injecting field %s into %s: %w", source.Path, target.Path, err)
 		}
 
 		dependencies.add(target, source)

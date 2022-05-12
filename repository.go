@@ -61,7 +61,7 @@ func (r *Repository) Parse(raw, res interface{}) (err error) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("unable to parse %T: %s", res, err)
+			return fmt.Errorf("unable to parse %T: %w", res, err)
 		}
 		return nil
 	}
@@ -75,7 +75,7 @@ func (r *Repository) Hook(ctx context.Context, f *Field) (err error) {
 
 	raw, provider, found, err := r.Retrieve(f.ConfigurationKey)
 	if err != nil {
-		return fmt.Errorf("configuring field %s: retrieving key %s: %s", f.Path, f.ConfigurationKey, err)
+		return fmt.Errorf("configuring field %s: retrieving key %s: %w", f.Path, f.ConfigurationKey, err)
 	}
 
 	if !found {
@@ -94,7 +94,7 @@ func (r *Repository) Hook(ctx context.Context, f *Field) (err error) {
 
 	err = r.Parse(raw, val.Interface())
 	if err != nil {
-		return fmt.Errorf("configuring field %s: parsing value for key %s: %s", f.Path, f.ConfigurationKey, err)
+		return fmt.Errorf("configuring field %s: parsing value for key %s: %w", f.Path, f.ConfigurationKey, err)
 	}
 
 	f.Provider = provider
