@@ -25,7 +25,7 @@ func Initialize(ctx context.Context, field *Field) error {
 		// Initialize the element itself via the interface.
 		err := field.Value.Interface().(Initializable).Init(ctx)
 		if err != nil {
-			return fmt.Errorf("initializing field: %s", err)
+			return fmt.Errorf("initializing field: %w", err)
 		}
 
 		return nil
@@ -36,7 +36,7 @@ func Initialize(ctx context.Context, field *Field) error {
 		// Initialize the element itself via the interface.
 		err := field.Value.Interface().(initializableDeprecated).Init()
 		if err != nil {
-			return fmt.Errorf("initializing field: %s", err)
+			return fmt.Errorf("initializing field: %w", err)
 		}
 
 		return nil
