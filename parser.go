@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type CustomParser interface {
+	Parse(string) error
+}
+
 func ParseString(raw, res interface{}) (err error) {
 	s, ok := raw.(string)
 	if !ok {
@@ -123,6 +127,12 @@ func ParseString(raw, res interface{}) (err error) {
 		}
 		*res = v
 	default:
+		if v, ok := res.(CustomParser); ok {
+			err := v.Parse(s)
+			if err == nil {
+				return nil
+			}
+		}
 		return ErrNotParseable
 	}
 

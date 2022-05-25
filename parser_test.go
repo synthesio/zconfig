@@ -1,13 +1,38 @@
 package zconfig
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
 	"time"
 )
 
+type customString string
+
+func (l *customString) Parse(s string) error {
+	if l == nil {
+		return fmt.Errorf("could not parse value: nil receiver")
+	}
+
+	switch s {
+	case "text":
+		*l = customStringText
+	case "json":
+		*l = customStringJSON
+	default:
+		return fmt.Errorf("unsupported formatter type")
+	}
+	return nil
+}
+
+const (
+	customStringText customString = "text"
+	customStringJSON customString = "json"
+)
+
 func TestParseString(t *testing.T) {
+
 	for _, c := range []struct {
 		raw interface{}
 		res interface{}
@@ -65,13 +90,21 @@ func TestParseString(t *testing.T) {
 
 		// Unmarshalers
 		{raw: "2019-01-11T15:01:31Z", res: time.Date(2019, time.January, 11, 15, 01, 31, 000, time.UTC), err: false},
+
+		// Custom type
+		{raw: "text", res: customStringText, err: false},
+		{raw: "json", res: customStringJSON, err: false},
+		{raw: "", res: new(customString), err: true},
+		{raw: "notfound", res: new(customString), err: true},
 	} {
 		var typ = reflect.TypeOf(c.res)
 		var ptr = false
+
 		if typ.Kind() == reflect.Ptr {
 			ptr = true
 			typ = typ.Elem()
 		}
+
 		var res = reflect.New(typ).Interface()
 
 		err := ParseString(c.raw, res)

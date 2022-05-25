@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.1.0 - 2022-05-25
+### Changed
+- update go.mod to go 1.18
+- add a new interface `CustomParser` to allow custom type to be used in `ParseString`
+
 ## 2.0.1 - 2022-05-12
 ### Fixed
 - make sure to wrap errors when using fmt.Errorf
