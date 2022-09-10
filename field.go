@@ -26,18 +26,26 @@ type Field struct {
 	Provider         string
 	Configurable     bool
 	ConfigurationKey string
+
+	// InjectionTargets contains a list of values registered for the injection
+	// of this field value, once it has been set.
+	InjectionTargets []reflect.Value
 }
 
-func (f *Field) Inject(s *Field) (err error) {
-	if !s.Value.Type().AssignableTo(f.Value.Type()) {
-		return fmt.Errorf("cannot inject %s into %s for field %s", s.Value.Type(), f.Value.Type(), f.Path)
+// AddInjectionTarget registers the value of the given target field for injection.
+// The method returns an error if the target type is not compatible with the receiver field type or
+// if the target value cannot be addressed.
+func (f *Field) AddInjectionTarget(target *Field) (err error) {
+	if !f.Value.Type().AssignableTo(target.Value.Type()) {
+		return fmt.Errorf("cannot inject %s into %s for field %s", f.Value.Type(), target.Value.Type(), target.Path)
 	}
 
-	if !f.Value.CanSet() {
-		return fmt.Errorf("cannot address %s for injection", f.Value.Type())
+	if !target.Value.CanSet() {
+		return fmt.Errorf("cannot address %s for injection", target.Value.Type())
 	}
 
-	f.Value.Set(s.Value)
+	f.InjectionTargets = append(f.InjectionTargets, target.Value)
+
 	return nil
 }
 

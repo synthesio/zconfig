@@ -4,14 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.0.0 - 2022-09-12
+### Changed
+- Handle injection via a dedicated `Inject` hook executed just after `Repository.Hook`
+  to have proper injection of non-pointer fields.
+  This is considered a breaking change because injection was previously 
+  handled by the call to `Processor.Process` independently of any registered Hooks.
+  **Important:** Users who do not call the `Configure` and do not use the `DefaultProcessor` must
+  add the `Inject` hook to their `Processor`, otherwise injection will stop working.
+
 ## 2.0.1 - 2022-05-12
 ### Fixed
-- make sure to wrap errors when using fmt.Errorf
-- error returned by hooks such as Init can be unwrapped
+- Make sure to wrap errors when using fmt.Errorf
+- Error returned by hooks such as Init can be unwrapped
 
 ## 2.0.0 - 2022-04-29
 ### Added
-- new Init interface which takes a context as parameter
+- New Init interface which takes a context as parameter
 
 ## 1.4.1 - 2021-12-15
 ### Fixed

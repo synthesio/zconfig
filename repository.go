@@ -18,7 +18,7 @@ type Repository struct {
 	parsers   []Parser
 }
 
-// Register a new Provider in this repository.
+// AddProviders registers a new Provider in this repository.
 func (r *Repository) AddProviders(providers ...Provider) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -45,7 +45,7 @@ func (r *Repository) Retrieve(key string) (value interface{}, provider string, f
 
 var ErrNotParseable = errors.New("not parseable")
 
-// Register allow anyone to add a custom parser to the list.
+// AddParsers allows anyone to add a custom parser to the list.
 func (r *Repository) AddParsers(parsers ...Parser) {
 	r.lock.Lock()
 	defer r.lock.Unlock()

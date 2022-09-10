@@ -14,7 +14,7 @@ var (
 func init() {
 	DefaultRepository.AddProviders(Args, Env)
 	DefaultRepository.AddParsers(ParseString)
-	DefaultProcessor.AddHooks(DefaultRepository.Hook, Initialize)
+	DefaultProcessor.AddHooks(DefaultRepository.Hook, Inject, Initialize)
 }
 
 // Configure a service using the default processor.
@@ -26,7 +26,7 @@ func Configure(ctx context.Context, s interface{}) error {
 // configuring a service.
 type Hook func(ctx context.Context, field *Field) error
 
-// Add a hook to the default repository.
+// AddHooks Adds the given hooks to the default repository.
 func AddHooks(hooks ...Hook) {
 	DefaultProcessor.AddHooks(hooks...)
 }
@@ -39,7 +39,7 @@ type Provider interface {
 	Priority() int
 }
 
-// Add a provider to the default repository.
+// AddProviders Adds the given providers to the default repository.
 func AddProviders(providers ...Provider) {
 	DefaultRepository.AddProviders(providers...)
 }
@@ -48,7 +48,7 @@ func AddProviders(providers ...Provider) {
 // given type.
 type Parser func(interface{}, interface{}) error
 
-// Add a parser to the default repository.
+// AddParsers Adds the given parsers to the default repository.
 func AddParsers(parsers ...Parser) {
 	DefaultRepository.AddParsers(parsers...)
 }

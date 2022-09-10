@@ -205,7 +205,7 @@ func resolve(root *Field) (fields []*Field, err error) {
 		dependencies.add(e, e.Children...)
 	}
 
-	// Inject the sources into the targets and add them to the dependencies
+	// Register injection targets into sources and mark sources as dependencies
 	// of the targets.
 	for target, key := range targets {
 		source, ok := sources[key]
@@ -213,9 +213,9 @@ func resolve(root *Field) (fields []*Field, err error) {
 			return nil, fmt.Errorf("injection source key %s undefined for path %s", key, target.Path)
 		}
 
-		err := target.Inject(source)
+		err := source.AddInjectionTarget(target)
 		if err != nil {
-			return nil, fmt.Errorf("injecting field %s into %s: %w", source.Path, target.Path, err)
+			return nil, fmt.Errorf("adding injection target %s to %s: %w", target.Path, source.Path, err)
 		}
 
 		dependencies.add(target, source)

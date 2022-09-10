@@ -86,16 +86,19 @@ func TestConfigure(t *testing.T) {
 		"a.b.c.d": "6",
 		"m.foo":   "7",
 	}}
-	var p2 = TestProvider{
-		"test2",
-		map[string]string{
-			"baz": "baz",
-		}}
+	var p2 = TestProvider{"test2", map[string]string{
+		"baz": "baz",
+	}}
 	AddHooks(tester.Hook)
 	AddProviders(p, p2)
 	var s S
 	err := Configure(context.Background(), &s)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// check that injection worked
+	if s.L != s.A {
+		t.Fatalf("injection of 'a' wasn't successful")
 	}
 }
