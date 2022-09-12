@@ -10,9 +10,9 @@ import (
 )
 
 type Service struct {
-	Workers        int              `key:"workers"`
-	Dependency     SimpleDependency `key:"dependency" inject-as:"dependency"`
-	Injected       SimpleDependency `inject:"dependency"`
+	Workers        int               `key:"workers"`
+	Dependency     *SimpleDependency `key:"dependency" inject-as:"dependency"`
+	Injected       *SimpleDependency `inject:"dependency"`
 	Recursive      *RecursiveDependency
 	notExported    SimpleDependency
 	notExportedPtr *SimpleDependency
@@ -91,38 +91,60 @@ func testGraph(t *testing.T, actual, expected, parent *Field) {
 }
 
 func TestResolve(t *testing.T) {
-	var v = reflect.ValueOf(new(Service))
-	root, err := walk(v, reflect.StructField{}, nil)
-	if err != nil {
-		t.Fatalf("walking service: %s", err)
-	}
-
-	fields, err := resolve(root)
-	if err != nil {
-		t.Fatalf("resolving graph: %s", err)
-	}
-
-	displayResolvedGraph(t, fields)
-
-	expected := map[string]struct{}{
-		"$":                {},
-		"$.Workers":        {},
-		"$.Dependency":     {},
-		"$.Dependency.Foo": {},
-		"$.Recursive":      {},
-	}
-
-	for _, field := range fields {
-		if _, ok := expected[field.Path]; ok {
-			delete(expected, field.Path)
-		} else {
-			t.Errorf("got unexpected field %s", field.Path)
+	t.Run("nominal case", func(t *testing.T) {
+		var v = reflect.ValueOf(new(Service))
+		root, err := walk(v, reflect.StructField{}, nil)
+		if err != nil {
+			t.Fatalf("walking service: %s", err)
 		}
-	}
 
-	for path := range expected {
-		t.Errorf("expected field %s not found", path)
-	}
+		fields, err := resolve(root)
+		if err != nil {
+			t.Fatalf("resolving graph: %s", err)
+		}
+
+		displayResolvedGraph(t, fields)
+
+		expected := map[string]struct{}{
+			"$":                {},
+			"$.Workers":        {},
+			"$.Dependency":     {},
+			"$.Dependency.Foo": {},
+			"$.Recursive":      {},
+		}
+
+		for _, field := range fields {
+			if _, ok := expected[field.Path]; ok {
+				delete(expected, field.Path)
+			} else {
+				t.Errorf("got unexpected field %s", field.Path)
+			}
+		}
+
+		for path := range expected {
+			t.Errorf("expected field %s not found", path)
+		}
+	})
+
+	t.Run("injection issue", func(t *testing.T) {
+		var v = reflect.ValueOf(new(struct {
+			Source string `inject-as:"source"`
+			Target string `inject:"source"`
+		}))
+		root, err := walk(v, reflect.StructField{}, nil)
+		if err != nil {
+			t.Fatalf("walking service: %s", err)
+		}
+
+		_, err = resolve(root)
+		if err == nil {
+			t.Fatal("expected an error, got nil")
+		}
+
+		if !strings.Contains(err.Error(), "cannot inject non pointer type string, defined at path $.Source") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func displayResolvedGraph(t *testing.T, fields []*Field) {

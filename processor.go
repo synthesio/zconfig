@@ -190,6 +190,10 @@ func resolve(root *Field) (fields []*Field, err error) {
 		paths[e.Path] = e
 
 		if key, ok := e.Tags.Lookup(TagInjectAs); ok {
+			if e.Value.Kind() != reflect.Ptr {
+				return nil, fmt.Errorf("cannot inject non pointer type %s, defined at path %s", e.Value.Type().Name(), e.Path)
+			}
+
 			if s, ok := sources[key]; ok {
 				return nil, fmt.Errorf("injection source key %s already defined at path %s", key, s.Path)
 			}

@@ -16,8 +16,8 @@ type S struct {
 	babar string
 	Bar   string
 	EE    EE `key:"ee"`
-	A     A  `key:"a" inject-as:"a"`
-	L     A  `inject:"a"`
+	A     *A `key:"a" inject-as:"a"`
+	L     *A `inject:"a"`
 	M     M  `key:"m"`
 }
 
