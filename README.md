@@ -160,17 +160,17 @@ into another, thus sharing resources. The `inject-as` tag defines an _injection
 source_ and the key used to identify it, while the `inject` tag defines an
 _injection target_ and the key of the source to use.
 
-Any type can be injected as long as the source is _assignable_ to the target.
+Any pointer type can be injected as long as the source is _assignable_ to the target.
 This is especially useful to allow sharing common configuration fields or even
 whole structs like a database handle.
 
 ```go
 type Service struct {
 	Foo struct{
-		Root string `inject:"bar-root"`
+		Root *string `inject:"bar-root"`
 	}
 	Bar struct{
-		Root string `inject-as:"bar-root"`
+		Root *string `inject-as:"bar-root"`
 	}
 }
 ```
