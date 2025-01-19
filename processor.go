@@ -18,8 +18,17 @@ type Processor struct {
 	hooks []Hook
 
 	// Usage message to be displayed on error or when help is requested.
-	// DefaultUsage will be used if left nil.
+	// Deprecated: use UsageVal instead
 	Usage func([]*Field)
+
+	// UsageVal allows defining a custom usage function, i.e. a function that is
+	// called when the --help flag is passed, and that is expected to print some
+	// helpful message to the standard output. The argument value is the value
+	// of the --help flag, e.g. --help=somevalue; if --help is passed without a
+	// value then UsageVal will be called with an empty string as value.
+	// If UsageVal is unset, then Usage is used. If Usage is unset too, then
+	// DefaultUsageVal is used.
+	UsageVal func(value string, fields []*Field)
 }
 
 func NewProcessor(hooks ...Hook) *Processor {
@@ -51,13 +60,21 @@ func (p *Processor) Process(ctx context.Context, s interface{}) error {
 
 	mark(root, "")
 
-	if _, ok, _ := Args.Retrieve("help"); ok {
-		usage := p.Usage
-		if p.Usage == nil {
-			usage = DefaultUsage
+	if rawVal, ok, _ := Args.Retrieve("help"); ok {
+		// we know rawVal is a string since it's coming from an ArgsProvider.
+		val := rawVal.(string)
+
+		var usage func(string, []*Field)
+		switch {
+		case p.UsageVal != nil:
+			usage = p.UsageVal
+		case p.Usage != nil:
+			usage = func(_ string, fields []*Field) { p.Usage(fields) }
+		default:
+			usage = DefaultUsageVal
 		}
 
-		usage(fields)
+		usage(val, fields)
 		os.Exit(0)
 	}
 
@@ -331,7 +348,14 @@ func mark(f *Field, key string) bool {
 	return true
 }
 
-func DefaultUsage(fields []*Field) {
+// DefaultUsageVal prints a usage message that lists the fields with their keys
+// in CLI form (e.g. --foo) and environment variable form (e.g. FOO), as well as
+// the fields descriptions and default values (if any).
+//
+// If called with the "cli" value, only the CLI form is printed, and if called
+// with the "env" value, only the environment variable form is printed. Any
+// other value (including an empty value) prints both forms.
+func DefaultUsageVal(val string, fields []*Field) {
 	var keys []string
 	var options = make(map[string]*Field)
 	for _, f := range fields {
@@ -351,6 +375,12 @@ func DefaultUsage(fields []*Field) {
 		flexwriter.Rigid{},      // env variable name
 		flexwriter.Shrinkable{}, // description
 		flexwriter.Rigid{},      // default value
+	}
+	switch val {
+	case "env":
+		columns[0] = flexwriter.Omit{}
+	case "cli":
+		columns[1] = flexwriter.Omit{}
 	}
 	required.SetColumns(columns...)
 	optional.SetColumns(columns...)
@@ -374,4 +404,12 @@ func DefaultUsage(fields []*Field) {
 
 	fmt.Printf("\nOptional parameters:\n")
 	_ = optional.Flush()
+}
+
+// DefaultUsage prints a usage message as DefaultUsageVal would with an empty
+// value.
+//
+// Deprecated: use DefaultUsageVal.
+func DefaultUsage(fields []*Field) {
+	DefaultUsageVal("", fields)
 }

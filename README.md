@@ -35,10 +35,13 @@ list of the available configuration keys, in their cli and env form, as well as
 their description and default values. (The message can be configured, see
 `zconfig.Processor.Usage`).
 
+You can also pass `--help=env` or `--help=cli` to display only the env or cli
+form, respectively.
+
 ```shell
 $ ./a.out --help
 Keys:
-addr	ADDR	address the server should bind to	(:80)
+--addr  ADDR  address the server should bind to  (:80)
 ```
 
 Configurations can be nested into structs to improve usability, and the keys of
@@ -68,7 +71,7 @@ func main() {
 ```shell
 $ ./a.out --help
 Keys:
-server.addr	SERVER_ADDR	address the server should bind to	(:80)
+--server.addr  SERVER_ADDR  address the server should bind to  (:80)
 ```
 
 The following types are handled by default by the library:
@@ -205,7 +208,7 @@ the second do the initialization of the field. The global `Configure()` and
 
 Help message is handled by the stock processor. After analyzing the given
 struct, it looks for a `--help` flag in the stock `ArgsProvider`. If found, it
-call the `zconfig.Processor.Usage` field (or the `zconfig.DefaultUsage` method
+call the `zconfig.Processor.UsageVal` field (or the `zconfig.DefaultUsageVal` method
 if nil) to display help.
 
 ### Hook
