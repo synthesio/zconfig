@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"text/tabwriter"
 	"unicode"
+
+	"github.com/hchargois/flexwriter"
 )
 
 // A Processor handle the service processing and execute hooks on the resulting
@@ -342,18 +343,29 @@ func DefaultUsage(fields []*Field) {
 	}
 	sort.Strings(keys)
 
-	required := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
-	optional := tabwriter.NewWriter(os.Stdout, 2, 2, 2, ' ', 0)
+	required := flexwriter.New()
+	optional := flexwriter.New()
+
+	columns := []flexwriter.Column{
+		flexwriter.Rigid{},      // CLI option name
+		flexwriter.Rigid{},      // env variable name
+		flexwriter.Shrinkable{}, // description
+		flexwriter.Rigid{},      // default value
+	}
+	required.SetColumns(columns...)
+	optional.SetColumns(columns...)
 
 	for _, key := range keys {
 		field := options[key]
+		desc, _ := field.Tags.Lookup(TagDescription)
+
+		row := []any{"--" + key, Env.FormatKey(key), desc}
 
 		def, ok := field.Tags.Lookup(TagDefault)
-		desc, _ := field.Tags.Lookup(TagDescription)
 		if ok {
-			fmt.Fprintf(optional, "%s\t%s\t%s\t(%s)\n", key, Env.FormatKey(key), desc, def)
+			optional.WriteRow(append(row, "("+def+")")...)
 		} else {
-			fmt.Fprintf(required, "%s\t%s\t%s\n", key, Env.FormatKey(key), desc)
+			required.WriteRow(row...)
 		}
 	}
 
