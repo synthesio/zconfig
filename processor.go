@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"sync"
 	"text/tabwriter"
 	"unicode"
 )
@@ -15,7 +14,6 @@ import (
 // A Processor handle the service processing and execute hooks on the resulting
 // fields.
 type Processor struct {
-	lock  sync.Mutex
 	hooks []Hook
 
 	// Usage message to be displayed on error or when help is requested.
