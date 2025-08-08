@@ -88,8 +88,14 @@ func (EnvProvider) Priority() int {
 	return 2
 }
 
+// FormatEnvKey transforms configuration keys to environment variable format.
+// Examples: "database.url" -> "DATABASE_URL", "api-key" -> "API_KEY"
+func FormatEnvKey(key string) string {
+	env := strings.ToUpper(key)
+	env = strings.ReplaceAll(env, ".", "_")
+	return strings.ReplaceAll(env, "-", "_")
+}
+
 func (EnvProvider) FormatKey(key string) (env string) {
-	env = strings.ToUpper(key)
-	env = strings.Replace(env, ".", "_", -1)
-	return strings.Replace(env, "-", "_", -1)
+	return FormatEnvKey(key)
 }

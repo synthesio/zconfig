@@ -10,12 +10,10 @@ import (
 )
 
 type Service struct {
-	Workers        int               `key:"workers"`
-	Dependency     *SimpleDependency `key:"dependency" inject-as:"dependency"`
-	Injected       *SimpleDependency `inject:"dependency"`
-	Recursive      *RecursiveDependency
-	notExported    SimpleDependency
-	notExportedPtr *SimpleDependency
+	Workers    int               `key:"workers"`
+	Dependency *SimpleDependency `key:"dependency" inject-as:"dependency"`
+	Injected   *SimpleDependency `inject:"dependency"`
+	Recursive  *RecursiveDependency
 }
 
 type SimpleDependency struct {

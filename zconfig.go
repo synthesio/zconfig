@@ -9,10 +9,18 @@ var (
 	DefaultProcessor  Processor
 	Args              = NewArgsProvider()
 	Env               = NewEnvProvider()
+	Dotenv            = NewDotenvProvider()
 )
 
 func init() {
-	DefaultRepository.AddProviders(Args, Env)
+	// Check if a custom dotenv path is specified via --dotenv argument
+	if dotenvPath, found, _ := Args.Retrieve("dotenv"); found && dotenvPath != "" {
+		if pathStr, ok := dotenvPath.(string); ok {
+			Dotenv = NewDotenvProviderWithPath(pathStr)
+		}
+	}
+
+	DefaultRepository.AddProviders(Args, Env, Dotenv)
 	DefaultRepository.AddParsers(ParseString)
 	DefaultProcessor.AddHooks(DefaultRepository.Hook, Initialize)
 }

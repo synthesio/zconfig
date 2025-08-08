@@ -7,18 +7,17 @@ import (
 )
 
 type S struct {
-	Foo   *string   `key:"foo"`
-	Baz   string    `key:"baz"`
-	Quz   string    `key:"quz" default:"some"`
-	T     time.Time `key:"t"`
-	E     E         `key:"e"`
-	F     F         `key:"f"`
-	babar string
-	Bar   string
-	EE    EE `key:"ee"`
-	A     *A `key:"a" inject-as:"a"`
-	L     *A `inject:"a"`
-	M     M  `key:"m"`
+	Foo *string   `key:"foo"`
+	Baz string    `key:"baz"`
+	Quz string    `key:"quz" default:"some"`
+	T   time.Time `key:"t"`
+	E   E         `key:"e"`
+	F   F         `key:"f"`
+	Bar string
+	EE  EE `key:"ee"`
+	A   *A `key:"a" inject-as:"a"`
+	L   *A `inject:"a"`
+	M   M  `key:"m"`
 }
 
 type A struct {

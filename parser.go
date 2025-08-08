@@ -15,6 +15,14 @@ func ParseString(raw, res interface{}) (err error) {
 	}
 
 	switch res := res.(type) {
+	case *regexp.Regexp:
+		var v *regexp.Regexp
+		v, err = regexp.Compile(s)
+		if err != nil {
+			return
+		}
+		*res = *v
+		return
 	case encoding.TextUnmarshaler:
 		return res.UnmarshalText([]byte(s))
 	case encoding.BinaryUnmarshaler:
@@ -40,9 +48,10 @@ func ParseString(raw, res interface{}) (err error) {
 			if raw == "" {
 				continue
 			}
-			v, err := strconv.Atoi(raw)
+			var v int
+			v, err = strconv.Atoi(raw)
 			if err != nil {
-				return err
+				return
 			}
 			*res = append(*res, v)
 		}
@@ -52,74 +61,81 @@ func ParseString(raw, res interface{}) (err error) {
 			if raw == "" {
 				continue
 			}
-			v, err := strconv.ParseInt(raw, 10, 64)
+			var v int64
+			v, err = strconv.ParseInt(raw, 10, 64)
 			if err != nil {
-				return err
+				return
 			}
 			*res = append(*res, v)
 		}
 	case *bool:
 		*res, err = strconv.ParseBool(s)
-		return err
+		return
 	case *int:
-		v, err := strconv.ParseInt(s, 10, strconv.IntSize)
+		var v int64
+		v, err = strconv.ParseInt(s, 10, strconv.IntSize)
 		*res = int(v)
-		return err
+		return
 	case *int8:
-		v, err := strconv.ParseInt(s, 10, 8)
+		var v int64
+		v, err = strconv.ParseInt(s, 10, 8)
 		*res = int8(v)
-		return err
+		return
 	case *int16:
-		v, err := strconv.ParseInt(s, 10, 16)
+		var v int64
+		v, err = strconv.ParseInt(s, 10, 16)
 		*res = int16(v)
-		return err
+		return
 	case *int32:
-		v, err := strconv.ParseInt(s, 10, 32)
+		var v int64
+		v, err = strconv.ParseInt(s, 10, 32)
 		*res = int32(v)
-		return err
+		return
 	case *int64:
-		v, err := strconv.ParseInt(s, 10, 64)
-		*res = int64(v)
-		return err
+		var v int64
+		v, err = strconv.ParseInt(s, 10, 64)
+		*res = v
+		return
 	case *uint:
-		v, err := strconv.ParseUint(s, 10, strconv.IntSize)
+		var v uint64
+		v, err = strconv.ParseUint(s, 10, strconv.IntSize)
 		*res = uint(v)
-		return err
+		return
 	case *uint8:
-		v, err := strconv.ParseUint(s, 10, 8)
+		var v uint64
+		v, err = strconv.ParseUint(s, 10, 8)
 		*res = uint8(v)
-		return err
+		return
 	case *uint16:
-		v, err := strconv.ParseUint(s, 10, 16)
+		var v uint64
+		v, err = strconv.ParseUint(s, 10, 16)
 		*res = uint16(v)
-		return err
+		return
 	case *uint32:
-		v, err := strconv.ParseUint(s, 10, 32)
+		var v uint64
+		v, err = strconv.ParseUint(s, 10, 32)
 		*res = uint32(v)
-		return err
+		return
 	case *uint64:
-		v, err := strconv.ParseUint(s, 10, 64)
-		*res = uint64(v)
-		return err
+		var v uint64
+		v, err = strconv.ParseUint(s, 10, 64)
+		*res = v
+		return
 	case *float32:
-		v, err := strconv.ParseFloat(s, 32)
+		var v float64
+		v, err = strconv.ParseFloat(s, 32)
 		*res = float32(v)
-		return err
+		return
 	case *float64:
-		v, err := strconv.ParseFloat(s, 64)
-		*res = float64(v)
-		return err
-	case *regexp.Regexp:
-		v, err := regexp.Compile(s)
-		if err != nil {
-			return err
-		}
-		*res = *v
-		return nil
+		var v float64
+		v, err = strconv.ParseFloat(s, 64)
+		*res = v
+		return
 	case *time.Duration:
-		v, err := time.ParseDuration(s)
+		var v time.Duration
+		v, err = time.ParseDuration(s)
 		if err != nil {
-			return err
+			return
 		}
 		*res = v
 	default:

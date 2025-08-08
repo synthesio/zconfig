@@ -210,13 +210,13 @@ func resolve(root *Field) (fields []*Field, err error) {
 				return nil, fmt.Errorf("cannot inject non pointer type %s, defined at path %s", e.Value.Type().Name(), e.Path)
 			}
 
-			if s, ok := sources[key]; ok {
+			if s, found := sources[key]; found {
 				return nil, fmt.Errorf("injection source key %s already defined at path %s", key, s.Path)
 			}
 			sources[key] = e
 		}
 
-		if key, ok := e.Tags.Lookup(TagInject); ok {
+		if key, found := e.Tags.Lookup(TagInject); found {
 			targets[e] = key
 		}
 
@@ -275,11 +275,11 @@ func resolve(root *Field) (fields []*Field, err error) {
 	return fields, nil
 }
 
-func newCycleError(dependencies dependencies) error {
+func newCycleError(deps dependencies) error {
 	var paths [][]string
 
-	for path, deps := range dependencies {
-		for depPath := range deps {
+	for path, dependencies := range deps {
+		for depPath := range dependencies {
 			paths = append(paths, []string{path, depPath})
 		}
 	}
@@ -287,7 +287,7 @@ func newCycleError(dependencies dependencies) error {
 	for {
 		var next [][]string
 		for _, path := range paths {
-			for fieldPath := range dependencies[path[len(path)-1]] {
+			for fieldPath := range deps[path[len(path)-1]] {
 				if fieldPath == path[0] {
 					return fmt.Errorf("cycle detected: %s", strings.Join(path, " -> "))
 				}

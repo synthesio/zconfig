@@ -76,16 +76,15 @@ Keys:
 
 The following types are handled by default by the library:
 
-* `encoding.TextUnmarshaller`
-* `encoding.BinaryUnmarshaller`
-* `(u)?int(32|64)?`
-* `float(32|64)`
-* `string`
-* `[]string`
-* `bool`
-* `time.Duration`
-* `regexp.Regexp`
-
+- `encoding.TextUnmarshaller`
+- `encoding.BinaryUnmarshaller`
+- `(u)?int(32|64)?`
+- `float(32|64)`
+- `string`
+- `[]string`
+- `bool`
+- `time.Duration`
+- `regexp.Regexp`
 
 ### Initialization
 
@@ -195,7 +194,7 @@ The `Field` struct is a graph representation of a single field of your
 configuration struct, with pointers for parent and children. The list of fields
 handled by the processor is ordered by deepest dependency first, meaning that
 for any given hook, all children of a given field are processed by the hook
-before the field itself.  For the case of injection, the targets aren't
+before the field itself. For the case of injection, the targets aren't
 included in this list, but the sources are processed before the target's
 branch.
 
